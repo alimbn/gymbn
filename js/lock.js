@@ -1,5 +1,5 @@
 const UNLOCK_KEY = 'gymbn_unlocked';
-const APP_PASSWORD = 'CHANGE_ME';
+const APP_PASSWORD = 'gyMbn123*';
 
 export function isUnlocked() {
   return localStorage.getItem(UNLOCK_KEY) === 'true';
