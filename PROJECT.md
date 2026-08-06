@@ -4,8 +4,8 @@
 Hocanın haftalık verdiği antrenman programını ve kullanıcının gerçekte yaptığını takip eden, telefona kurulabilen offline PWA. Şu an manuel tutulan Excel'in yerini alacak; hocaya "ne verildi / ne yapıldı" kıyasını göstermeyi kolaylaştırmak asıl amaç.
 
 ## Faz
-**Şu an:** MVP + tüm ek özellikler tamamlandı, test edildi. GitHub Pages deploy süreci başladı — kullanıcı bugün salonda saha testi yapacak, bu yüzden acil.
-**Sonra:** İstenirse placeholder ikon değiştirilebilir; gerçek erişim kontrolü istenirse (GitHub Pro / Cloudflare Access) ayrı bir oturumda değerlendirilir.
+**Şu an:** **Canlıda** — `https://alimbn.github.io/gymbn/`. MVP + tüm ek özellikler tamamlandı, deploy edildi, canlı sitede doğrulandı (şifre ekranı, SW/manifest scope, cache, navigasyon). Kullanıcı bugün salonda saha testi yapıyor.
+**Sonra:** Saha testinden gelecek geri bildirimler; istenirse placeholder ikon değiştirilebilir; gerçek erişim kontrolü istenirse (GitHub Pro / Cloudflare Access) ayrı bir oturumda değerlendirilir.
 
 ## Kararlar
 - **Konum:** Bu proje, kardeş proje **Game-1**'den (ayrı bir YouTube Playables oyunu) tamamen bağımsız, kendi klasöründe.
@@ -42,22 +42,29 @@ Hocanın haftalık verdiği antrenman programını ve kullanıcının gerçekte 
 - [x] Haftalık program görünümü (`#/week`) — giriş noktası hafta merkezli oldu, uçtan uca test edildi
 - [x] Toplu program yapıştırma + önizleme (`#/bulk-add`) + egzersiz durum işareti (✅/🔻) — gerçek kullanıcı metniyle test edildi
 - [x] Gün/hafta silme, egzersiz akordiyonu, gün tamamlama işareti — hepsi test edildi
-- [x] Basit şifre ekranı (`js/lock.js`) — test edildi, gerçek şifre değeri kullanıcıdan bekleniyor (şu an placeholder)
-- [ ] **GitHub Pages deploy (devam ediyor)** — yerel git repo hazır (`main` branch, ilk commit atıldı), kullanıcının boş bir GitHub reposu oluşturması bekleniyor, sonra push + Pages ayarları
+- [x] Basit şifre ekranı (`js/lock.js`) — gerçek şifre kullanıcıdan alındı, canlıda test edildi
+- [x] **GitHub Pages deploy** — repo `github.com/alimbn/gymbn` (public), push GitHub Desktop ile yapıldı, Pages `main` / `(root)`'tan yayınlanıyor. Canlı site doğrulandı: şifre ekranı çalışıyor, service worker scope doğru (`https://alimbn.github.io/gymbn/`), manifest/ikonlar 200 dönüyor, cache doluyor (24 dosya), hafta görünümüne navigasyon çalışıyor, konsolda sıfır hata.
 
 ## Kapsam Dışı (şimdilik)
 Çoklu cihaz senkron, bulut backend, kimlik doğrulama, grafik/analitik (son-sefer kıyası dışında).
 
-## Nasıl Çalıştırılır
+## Canlı Link
+`https://alimbn.github.io/gymbn/` — GitHub Pages, `alimbn/gymbn` reposunun `main` branch'inden yayınlanıyor. Şifre ekranı arkasında (bkz. Kararlar → Basit şifre ekranı). Güncelleme: bir sonraki `git push`'tan birkaç dakika sonra otomatik yayına giriyor; kullanıcının tarayıcısı da SW'nin otomatik güncelleme mekanizması sayesinde kendini tazeliyor (manuel önbellek temizliği gerekmiyor).
+
+## Nasıl Çalıştırılır (yerel geliştirme)
 Proje klasöründe: `python devserver.py 5174 .` → `http://localhost:5174`
 (Claude Code içinde `.claude/launch.json`'daki `gymbn-static` konfigürasyonu bunu otomatik yapar.)
 
+Yayına almak için: `git add -A && git commit -m "..."` sonra `git push` (bu ortamdan internet erişimi yok — push'u kullanıcı kendi GitHub Desktop'ından ya da terminalinden yapıyor, bkz. Bilinen Notlar).
+
 ## Bilinen Notlar
+- **Bu ortamın terminalinden (Bash/PowerShell) genel internet erişimi yok** — sadece `localhost`. Hem LAN IP'ye (telefon testi için denenmişti) hem `github.com`'a (DNS çözümlemesi dahi başarısız, `git push` bu yüzden hep başarısız oluyor) bağlantı denendi, ikisi de başarısız. Bu yüzden: `git push` her zaman kullanıcının kendi GitHub Desktop'ından ya da terminalinden yapılmalı — yerel commit'leri ben atabiliyorum, push'u atamıyorum. Not: Tarayıcı önizleme aracının (Browser pane) internet erişimi VAR, bu yüzden deploy sonrası doğrulamayı (canlı siteyi açıp test etmeyi) ben yapabiliyorum, sadece push'un kendisini yapamıyorum.
 - **Telefon/LAN erişimi (`192.168.x.x:5174`) bu geliştirme ortamından çalışmıyor** — sadece `localhost` erişilebilir (test edildi: `Test-NetConnection` LAN IP'sine bağlanamadı). Telefonda gerçek kurulum için GitHub Pages deploy'u gerekiyor.
 - **Service worker otomatik güncelleme (2026-08-06 eklendi):** Önceden, kod güncellendiğinde kullanıcının tarayıcısı eski önbelleklenmiş sürümü göstermeye devam edebiliyordu (gerçek bir kullanıcı bunu yaşadı — "Programı Yapıştır" butonu görünmüyordu). Artık `service-worker.js`'in `activate` handler'ı gerçek bir güncelleme olduğunu (eski cache adı varlığından) anlayıp açık sekmeleri otomatik yeniliyor — kullanıcının elle önbellek temizlemesi gerekmiyor. Bu mekanizma bizzat test edildi (eski sürüm simüle edilip yeni sürüme geçişte sekmenin kendiliğinden yenilendiği doğrulandı). Mevcut takılı kalmış bir tarayıcıyı bu düzeltmeyle kurtarmak için yine de bir kerelik elle müdahale gerekiyor (SW unregister + cache temizleme, localStorage'a dokunmadan).
 
 ## Değişiklik Geçmişi
 - 2026-08-04: Proje başlatıldı, plan onaylandı, bu dosya oluşturuldu. Aynı gün içinde MVP'nin tüm ekranları yazıldı, PWA kabuğu eklendi, kapsamlı uçtan uca test (offline dahil) geçildi. MVP kullanıma hazır.
 - 2026-08-06 (devam): Kullanıcı gerçek kullanımda "Programı Yapıştır" butonunu göremedi — eski service worker sürümü tarayıcısında takılı kalmıştı (LAN IP üzerinden telefon erişimi de bu ortamda çalışmadığı ayrıca tespit edildi). Kök nedeni çözmek için service worker'a otomatik güncelleme/yenileme mekanizması eklendi (CACHE_NAME v4), test edildi.
+- 2026-08-06 (devam): Gün/hafta silme, egzersiz akordiyonu, gün tamamlama işareti, basit şifre ekranı eklendi — hepsi test edildi. Ardından **GitHub Pages'e deploy edildi**: yerel git repo hazırlandı (3 commit), kullanıcı `github.com/alimbn/gymbn` reposunu oluşturdu, push'u GitHub Desktop ile kendisi yaptı (bu ortamdan `git push` denendi ama internet erişimi olmadığı ortaya çıktı — `github.com` DNS çözümlemesi bile başarısız oluyor). Pages ayarlandıktan sonra canlı site (`https://alimbn.github.io/gymbn/`) tarayıcı önizleme aracıyla uçtan uca doğrulandı: şifre ekranı, SW scope, manifest/ikonlar, cache, navigasyon — hepsi sorunsuz. Kullanıcı bugün salonda saha testine başlıyor.
 - 2026-08-05: Haftalık program görünümü eklendi (`js/views/week.js`) — giriş noktası günden haftaya taşındı. Dashboard CTA, `dayEntry.js` (sadeleşti, geri butonu `history.back()`'e geçti), `app.js` rotaları, nav linki güncellendi. Bu sırada bulunup düzeltilen 2 hata: (1) `app.js`'te `history` modül import'u ile global `window.history` arasında isim çakışması, (2) `dayEntry.js`'in geri butonunun her zaman panele dönmesi (artık hafta görünümüne de dönebilmesi lazımdı). Uçtan uca test edildi, test verisi temizlendi.
 - 2026-08-06: Toplu program yapıştırma (`js/bulkParse.js` + `js/views/bulkAdd.js`) ve egzersiz durum işareti (✅/🔻) eklendi. Parser, kullanıcının gerçek 4 günlük/32 satırlık hoca mesajına karşı hem Node.js'te hem tarayıcıda test edildi — tüm alanlar (ağırlık, set, tekrar, rir, not, "(15x15kg)" gibi ağırlık açıklamaları, "rir X olana kadar tekrar"/"tükenene kadar" gibi serbest ifadeler) doğru ayrıştı. Aynı programın ikinci kez yapıştırılmasında egzersiz/gün-tipi kütüphanesinin doğru eşleştiği (kopya oluşturmadığı) doğrulandı. `service-worker.js` cache'i v3'e yükseltildi. Test verisi temizlendi.
