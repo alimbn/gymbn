@@ -1,0 +1,60 @@
+# gyMbn — Gym Takip PWA
+
+## Hedef
+Hocanın haftalık verdiği antrenman programını ve kullanıcının gerçekte yaptığını takip eden, telefona kurulabilen offline PWA. Şu an manuel tutulan Excel'in yerini alacak; hocaya "ne verildi / ne yapıldı" kıyasını göstermeyi kolaylaştırmak asıl amaç.
+
+## Faz
+**Şu an:** MVP + haftalık program görünümü + toplu program yapıştırma + egzersiz durum işareti tamamlandı, test edildi. Kullanıma hazır.
+**Sonra:** GitHub Pages'e deploy (ayrı onay gerektiren adım — repo oluşturma/push) — telefona "gerçek" bir linkle kurmak için. İstenirse placeholder ikon değiştirilebilir.
+
+## Kararlar
+- **Konum:** Bu proje, kardeş proje **Game-1**'den (ayrı bir YouTube Playables oyunu) tamamen bağımsız, kendi klasöründe.
+- **Teknik yığın:** Vanilla HTML/CSS/JS, framework yok, build adımı yok — Game-1'deki sadelik felsefesiyle tutarlı. ES module'ler (`<script type="module">`), bundler yok.
+- **Veri saklama:** Tek cihaz, tamamen yerel (localStorage, tek JSON blob `gymbnData`, versiyonlu şema). Backend/giriş yok — kullanıcının açık tercihi: bugün bitirip hemen telefona kurulabilsin.
+- **Set girişi UX:** Set başına ayrı satır (stepper +/- ile hızlı ayar + dokunca klavye açan serbest metin alanı). Kullanıcının özel vurgusu: "set başına ayrı satır olabilir ama UI/UX çok iyi olmalı" — bu yüzden auto-prefill (prescribed'dan) + carry-forward (bir seti düzenleyince sonraki dokunulmamış setlere kopyalama) mantığı var, amaç: performans plana uyduysa kullanıcı hiç dokunmadan geçsin.
+- **Gün tipleri (Anterior-1 vs.):** Egzersiz kütüphanesiyle aynı mantık — kayıtlı liste, dropdown'dan seçilen, kullanıcı yönetebiliyor (ekle/yeniden adlandır/arşivle).
+- **Prescribed (hocanın verdiği) tek satır, actual (gerçek yapılan) set-bazlı dizi.** Hocanın hedefi zaten uniform bir değer; asıl set-set farklılık gerçek performansta oluyor.
+- **Ağırlık/tekrar/rir alanları hep string.** Excel'de görülen "15\*15", "23ün 5 altı", "50sn" (süre bazlı) gibi serbest-metin değerleri karşılasın diye — ayrı bir "egzersiz tipi" sistemi kurulmadı.
+- **Egzersiz/gün-tipi silme = arşivleme (`archived:true`), gerçek silme değil** — geçmiş kayıtlar id ile referans veriyor, hard-delete onları "hayalet" bırakırdı.
+- **Yedekleme (export/import JSON) MVP'ye dahil**, fast-follow değil — local-only depolamanın veri kaybı riskine karşı, maliyeti neredeyse sıfır olduğu için.
+- **Ödeme takibi:** Tek tarih yerine ödeme kayıtları listesi (`payments[]`) tutuluyor — neredeyse aynı maliyetle geçmiş de görülüyor. 4 haftalık döngüdeki hafta (1-4) ve gecikme durumu son ödeme tarihinden türetiliyor.
+- **Giriş noktası gün değil hafta merkezli (2026-08-05 eklendi):** Dashboard'daki "Bugünkü Antrenmanı Kaydet/Devam Et" → "Bu Haftanın Programını Oluştur/Devam Et" oldu, `#/week` ekranına götürüyor. Haftalık görünüm 7 sabit slot (Pazartesi-Pazar, kullanıcının seçtiği "7 günlük sabit takvim" seçeneği), boş slotlar soluk ama tıklanınca gün oluşturuyor, dolu slotlar özet gösterip `dayEntry`'ye götürüyor. **Şema değişikliği yok** — "hafta" persist edilen bir varlık değil, sadece o haftanın Pazartesi tarihinden (`mondayOfWeek`) hesaplanan navigasyonel bir kavram (Geçmiş'in ay gruplaması gibi). `#/day/new` rotası ve `dayEntry.js`'deki `mode:'today'` dalı kaldırıldı (artık gün oluşturma sorumluluğu `week.js`'in slot tıklama handler'ında). `dayEntry.js`'in geri butonu bu yüzden `history.back()`'e çevrildi (artık hem hafta görünümünden hem Geçmiş'ten açılabiliyor, sabit bir hedefe dönmek yanlış olurdu).
+- **Toplu program yapıştırma (2026-08-06 eklendi):** Kullanıcının gerçek kullanım şekli — hocası haftalık programı düz metin olarak atıyor ("Anterior - 1" gibi başlık, altında "egzersiz adı N set X-Y tekrar Zkg" formatında satırlar, aralarında boş satır). Hafta görünümünden "📋 Programı Yapıştır" ile tüm haftayı tek seferde yapıştırıp `js/bulkParse.js`'in (saf, DOM'suz) satır-satır regex zinciriyle ad/set/tekrar/rir/ağırlık/not'a ayrıştırıyor, gün-tipi başlıklarını mevcut kütüphaneyle eşleştiriyor (yoksa yeni oluşturuyor), haftanın boş günlerine otomatik dağıtıyor. **Düzenlenebilir önizleme ekranı** (`js/views/bulkAdd.js`) parse sonrası her şeyi göstermeden commit etmiyor — parse %100 güvenilir olamayacağı için (ör. "(15x15kg)" ağırlık açıklaması mı yoksa not mu, "rir X olana kadar tekrar" gibi serbest ifadeler) bu önizleme güvenlik ağı. Algoritma kullanıcının gerçek 32 satırlık metnine karşı hem Node.js'te hem tarayıcıda birebir test edildi, sıfır hata.
+  - **Düzeltme (aynı gün):** Tarih seçimi başta sadece "boş" (hiç kaydı olmayan) günleri listeleyen bir `<select>` idi — kullanıcı zaten bazı günlere (0 egzersizli "kabuk" kayıtlar dahil) dokunmuş olduğu için seçenekler sessizce kayboluyor, kafa karıştırıyordu. Gerçek bir `<input type="date">`'e çevrildi: artık hiçbir tarih gizlenmiyor, hangi tarih seçilirse seçilsin altında "bu günde zaten X var, üzerine eklenecek" bilgisi çıkıyor. Ayrıca: hedef günün zaten bir kaydı varsa ama gün tipi boşsa (kullanıcının "#108" örneği gibi) artık dolduruluyor; zaten bir gün tipi varsa asla sessizce değiştirilmiyor.
+- **Gün/hafta silme (2026-08-06 eklendi):** Daha önce hiç silme yolu yoktu (`deleteDayEntry` storage.js'de vardı ama hiçbir ekran çağırmıyordu — kullanıcı "#108" gibi ihtiyaç duymadığı bir günü nasıl sileceğini sordu). `dayEntry.js` başlığına 🗑 butonu eklendi (o günü tamamen siler, `history.back()` ile geri döner). `week.js`'e, o hafta en az bir gün kaydı varsa görünen "Bu Haftadaki Tüm Günleri Sil" butonu eklendi (haftanın 7 gününü topluca siler). İkisi de silinecek gün/egzersiz sayısını gösteren `confirm()` ile onay istiyor.
+- **Egzersiz kartları akordiyon (2026-08-06 eklendi):** Kullanıcının isteği: "aynı anda bir ağırlık çalışabilirim, sadece ona odaklanmamı kolaylaştırır." `dayEntry.js`'deki egzersiz kartları artık tek seferde sadece biri açık kalacak şekilde akordiyon (başlığa tıklayınca aç/kapa, yeni bir tanesi açılınca öncekini kapatır). Kapalıyken sadece isim + (oy verilmişse) ✅/🔻 durum ikonu görünüyor — kapalı kartların gövdesi (planlanan alanlar, set satırları, not) hiç DOM'a render edilmiyor, sadece açık olan. Varsayılan: hepsi kapalı başlıyor (kullanıcı isteği — ilk açık gelmesin); yeni egzersiz eklenince o açılıyor. Açık/kapalı durumu kalıcı değil, sadece o ziyaret için.
+- **Gün tamamlama işareti (2026-08-06 eklendi):** `dayEntry.js`'de egzersiz listesinin altında "Günü Tamamla" toggle butonu — `entry.completed` (boolean) alanını değiştiriyor. Kullanıcının kendi tabiriyle "bir karşılığı olmak zorunda değil": sadece görsel bir işaret, başka hiçbir mantığı (kilitleme, hesaplama vs.) etkilemiyor. Tek etkisi: `week.js`'te o günün başlığının yanına ✅ ekleniyor, böylece haftalık görünümden hangi günlerin bittiği anlaşılıyor.
+- **Egzersiz durum işareti (2026-08-06 eklendi):** Her egzersiz instance'ında ✅ (istenildiği gibi yaptım) / 🔻 (yapamadım) üç-durumlu (boş↔good↔bad) hızlı işaret — `status` alanı, `updateInstanceStatus()`.
+- **Yerel geliştirme sunucusu:** Düz `python -m http.server` yerine `devserver.py` (bu projede) kullanılıyor — sebebi, tarayıcının `<script type="module">` dosyalarını agresif cache'lemesi (özellikle hash-routing'de sadece `#...` değişen navigasyonlarda tam sayfa yenilenmediği için eski JS çalışmaya devam edebiliyordu). `devserver.py` tüm yanıtlara `Cache-Control: no-store` ekliyor, bu sorunu çözüyor.
+- Detaylı veri şeması, dosya yapısı ve ekran tasarımları için bkz. plan dosyası: `C:\Users\mubin\.claude\plans\vivid-squishing-floyd.md`
+
+## Sonraki Adımlar
+- [x] Gereksinim toplama + mimari kararlar (kullanıcıyla netleşti)
+- [x] Uygulama planı yazıldı ve onaylandı
+- [x] İskelet (index.html, style.css, storage.js, router) — yazıldı ve test edildi
+- [x] Egzersiz / gün-tipi kütüphaneleri — yazıldı, ekle/yeniden adlandır/arşivle test edildi
+- [x] Gün girişi ekranı (set bazlı giriş, carry-forward, prescribed↔actual canlı senkron, son-sefer kıyası) — yazıldı, tarayıcıda uçtan uca test edildi
+- [x] Dashboard, ödemeler, geçmiş, diğer/yedekleme ekranları — yazıldı, temel akışlar test edildi (export/import fonksiyon seviyesinde test edildi)
+- [x] PWA kabuğu (manifest, service worker, placeholder ikonlar) — dosyalar yazıldı, app.js'e SW kaydı eklendi
+- [x] **Son kapsamlı uçtan uca test** — gerçekçi bir haftalık senaryo (8 egzersiz, gün girişi, ödeme, geçmiş, kütüphane düzenleme) baştan sona test edildi; service worker offline davranışı sunucuyu kapatıp doğrulandı (uygulama önbellekten sorunsuz açıldı); manifest + ikonlar doğrulandı; konsol boyunca sıfır hata. Test verileri temizlendi, uygulama şu an tertemiz/boş durumda.
+- [x] Placeholder ikonlar (basit dambıl motifi) — istenirse daha sonra değiştirilebilir
+- [x] Haftalık program görünümü (`#/week`) — giriş noktası hafta merkezli oldu, uçtan uca test edildi
+- [x] Toplu program yapıştırma + önizleme (`#/bulk-add`) + egzersiz durum işareti (✅/🔻) — gerçek kullanıcı metniyle test edildi
+- [ ] (Sonra) GitHub Pages'e deploy — kullanıcı onayı gerekiyor, henüz istenmedi
+
+## Kapsam Dışı (şimdilik)
+Çoklu cihaz senkron, bulut backend, kimlik doğrulama, grafik/analitik (son-sefer kıyası dışında).
+
+## Nasıl Çalıştırılır
+Proje klasöründe: `python devserver.py 5174 .` → `http://localhost:5174`
+(Claude Code içinde `.claude/launch.json`'daki `gymbn-static` konfigürasyonu bunu otomatik yapar.)
+
+## Bilinen Notlar
+- **Telefon/LAN erişimi (`192.168.x.x:5174`) bu geliştirme ortamından çalışmıyor** — sadece `localhost` erişilebilir (test edildi: `Test-NetConnection` LAN IP'sine bağlanamadı). Telefonda gerçek kurulum için GitHub Pages deploy'u gerekiyor.
+- **Service worker otomatik güncelleme (2026-08-06 eklendi):** Önceden, kod güncellendiğinde kullanıcının tarayıcısı eski önbelleklenmiş sürümü göstermeye devam edebiliyordu (gerçek bir kullanıcı bunu yaşadı — "Programı Yapıştır" butonu görünmüyordu). Artık `service-worker.js`'in `activate` handler'ı gerçek bir güncelleme olduğunu (eski cache adı varlığından) anlayıp açık sekmeleri otomatik yeniliyor — kullanıcının elle önbellek temizlemesi gerekmiyor. Bu mekanizma bizzat test edildi (eski sürüm simüle edilip yeni sürüme geçişte sekmenin kendiliğinden yenilendiği doğrulandı). Mevcut takılı kalmış bir tarayıcıyı bu düzeltmeyle kurtarmak için yine de bir kerelik elle müdahale gerekiyor (SW unregister + cache temizleme, localStorage'a dokunmadan).
+
+## Değişiklik Geçmişi
+- 2026-08-04: Proje başlatıldı, plan onaylandı, bu dosya oluşturuldu. Aynı gün içinde MVP'nin tüm ekranları yazıldı, PWA kabuğu eklendi, kapsamlı uçtan uca test (offline dahil) geçildi. MVP kullanıma hazır.
+- 2026-08-06 (devam): Kullanıcı gerçek kullanımda "Programı Yapıştır" butonunu göremedi — eski service worker sürümü tarayıcısında takılı kalmıştı (LAN IP üzerinden telefon erişimi de bu ortamda çalışmadığı ayrıca tespit edildi). Kök nedeni çözmek için service worker'a otomatik güncelleme/yenileme mekanizması eklendi (CACHE_NAME v4), test edildi.
+- 2026-08-05: Haftalık program görünümü eklendi (`js/views/week.js`) — giriş noktası günden haftaya taşındı. Dashboard CTA, `dayEntry.js` (sadeleşti, geri butonu `history.back()`'e geçti), `app.js` rotaları, nav linki güncellendi. Bu sırada bulunup düzeltilen 2 hata: (1) `app.js`'te `history` modül import'u ile global `window.history` arasında isim çakışması, (2) `dayEntry.js`'in geri butonunun her zaman panele dönmesi (artık hafta görünümüne de dönebilmesi lazımdı). Uçtan uca test edildi, test verisi temizlendi.
+- 2026-08-06: Toplu program yapıştırma (`js/bulkParse.js` + `js/views/bulkAdd.js`) ve egzersiz durum işareti (✅/🔻) eklendi. Parser, kullanıcının gerçek 4 günlük/32 satırlık hoca mesajına karşı hem Node.js'te hem tarayıcıda test edildi — tüm alanlar (ağırlık, set, tekrar, rir, not, "(15x15kg)" gibi ağırlık açıklamaları, "rir X olana kadar tekrar"/"tükenene kadar" gibi serbest ifadeler) doğru ayrıştı. Aynı programın ikinci kez yapıştırılmasında egzersiz/gün-tipi kütüphanesinin doğru eşleştiği (kopya oluşturmadığı) doğrulandı. `service-worker.js` cache'i v3'e yükseltildi. Test verisi temizlendi.

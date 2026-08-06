@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <title>Gym Takip</title>
+  <meta name="description" content="Haftalık antrenman programı ve gerçek performans takibi">
+  <meta name="theme-color" content="#12141a">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" href="./icons/icon-192.png">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="app-header">
+    <span class="app-title">Gym Takip</span>
+  </header>
+
+  <main id="view-root"></main>
+
+  <nav class="bottom-nav">
+    <a href="#/" class="nav-item" data-nav="dashboard">
+      <span class="nav-icon" aria-hidden="true">🏠</span>
+      <span class="nav-label">Panel</span>
+    </a>
+    <a href="#/week" class="nav-item" data-nav="log">
+      <span class="nav-icon" aria-hidden="true">💪</span>
+      <span class="nav-label">Kaydet</span>
+    </a>
+    <a href="#/history" class="nav-item" data-nav="history">
+      <span class="nav-icon" aria-hidden="true">📅</span>
+      <span class="nav-label">Geçmiş</span>
+    </a>
+    <a href="#/more" class="nav-item" data-nav="more">
+      <span class="nav-icon" aria-hidden="true">☰</span>
+      <span class="nav-label">Diğer</span>
+    </a>
+  </nav>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
