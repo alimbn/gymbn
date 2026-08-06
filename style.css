@@ -45,6 +45,43 @@ h1, h2, h3, p {
   margin: 0;
 }
 
+/* Lock screen */
+
+.lock-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.lock-card {
+  width: 100%;
+  max-width: 320px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-5);
+  text-align: center;
+}
+
+.lock-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: var(--space-4);
+}
+
+.lock-card input[type="password"] {
+  margin-bottom: var(--space-3);
+  text-align: center;
+}
+
+.lock-error {
+  color: var(--danger);
+  font-size: 13px;
+  margin-top: var(--space-3);
+}
+
 button {
   font-family: inherit;
 }

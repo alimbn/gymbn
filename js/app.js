@@ -1,6 +1,7 @@
 import { loadState } from './storage.js';
 import { addRoute, renderRoute } from './router.js';
 import { todayIso, mondayOfWeek } from './util.js';
+import { isUnlocked, showLockScreen } from './lock.js';
 import * as dashboard from './views/dashboard.js';
 import * as week from './views/week.js';
 import * as bulkAdd from './views/bulkAdd.js';
@@ -11,52 +12,60 @@ import * as historyView from './views/history.js';
 import * as payments from './views/payments.js';
 import * as more from './views/more.js';
 
-loadState();
+if (!isUnlocked()) {
+  showLockScreen();
+} else {
+  initApp();
+}
 
-const viewRoot = document.getElementById('view-root');
+function initApp() {
+  loadState();
 
-addRoute(/^#\/?$/, (root) => dashboard.render(root));
-addRoute(/^#\/week$/, (root) => {
-  const monday = mondayOfWeek(todayIso());
-  history.replaceState(null, '', '#/week/' + monday);
-  week.render(root, { mondayIso: monday });
-});
-addRoute(/^#\/week\/([^/]+)$/, (root, match) => week.render(root, { mondayIso: match[1] }));
-addRoute(/^#\/bulk-add$/, (root) => bulkAdd.render(root, { mondayIso: mondayOfWeek(todayIso()) }));
-addRoute(/^#\/bulk-add\/([^/]+)$/, (root, match) => bulkAdd.render(root, { mondayIso: match[1] }));
-addRoute(/^#\/day\/([^/]+)$/, (root, match) => dayEntry.render(root, { id: match[1] }));
-addRoute(/^#\/exercises$/, (root) => exerciseLibrary.render(root));
-addRoute(/^#\/day-types$/, (root) => dayTypeLibrary.render(root));
-addRoute(/^#\/history$/, (root) => historyView.render(root));
-addRoute(/^#\/payments$/, (root) => payments.render(root));
-addRoute(/^#\/more$/, (root) => more.render(root));
+  const viewRoot = document.getElementById('view-root');
 
-function updateActiveNav() {
-  const hash = location.hash || '#/';
-  const activeMap = {
-    dashboard: hash === '#/' || hash === '',
-    log: hash.startsWith('#/day') || hash.startsWith('#/week') || hash.startsWith('#/bulk-add'),
-    history: hash.startsWith('#/history'),
-    more: hash.startsWith('#/more') || hash.startsWith('#/exercises') || hash.startsWith('#/day-types') || hash.startsWith('#/payments'),
-  };
-  document.querySelectorAll('.nav-item').forEach((el) => {
-    el.classList.toggle('active', !!activeMap[el.dataset.nav]);
+  addRoute(/^#\/?$/, (root) => dashboard.render(root));
+  addRoute(/^#\/week$/, (root) => {
+    const monday = mondayOfWeek(todayIso());
+    history.replaceState(null, '', '#/week/' + monday);
+    week.render(root, { mondayIso: monday });
   });
-}
+  addRoute(/^#\/week\/([^/]+)$/, (root, match) => week.render(root, { mondayIso: match[1] }));
+  addRoute(/^#\/bulk-add$/, (root) => bulkAdd.render(root, { mondayIso: mondayOfWeek(todayIso()) }));
+  addRoute(/^#\/bulk-add\/([^/]+)$/, (root, match) => bulkAdd.render(root, { mondayIso: match[1] }));
+  addRoute(/^#\/day\/([^/]+)$/, (root, match) => dayEntry.render(root, { id: match[1] }));
+  addRoute(/^#\/exercises$/, (root) => exerciseLibrary.render(root));
+  addRoute(/^#\/day-types$/, (root) => dayTypeLibrary.render(root));
+  addRoute(/^#\/history$/, (root) => historyView.render(root));
+  addRoute(/^#\/payments$/, (root) => payments.render(root));
+  addRoute(/^#\/more$/, (root) => more.render(root));
 
-function onRouteChange() {
-  renderRoute(viewRoot);
-  updateActiveNav();
-  viewRoot.scrollTo(0, 0);
-}
-
-window.addEventListener('hashchange', onRouteChange);
-onRouteChange();
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./service-worker.js').catch((err) => {
-      console.error('Service worker kaydı başarısız', err);
+  function updateActiveNav() {
+    const hash = location.hash || '#/';
+    const activeMap = {
+      dashboard: hash === '#/' || hash === '',
+      log: hash.startsWith('#/day') || hash.startsWith('#/week') || hash.startsWith('#/bulk-add'),
+      history: hash.startsWith('#/history'),
+      more: hash.startsWith('#/more') || hash.startsWith('#/exercises') || hash.startsWith('#/day-types') || hash.startsWith('#/payments'),
+    };
+    document.querySelectorAll('.nav-item').forEach((el) => {
+      el.classList.toggle('active', !!activeMap[el.dataset.nav]);
     });
-  });
+  }
+
+  function onRouteChange() {
+    renderRoute(viewRoot);
+    updateActiveNav();
+    viewRoot.scrollTo(0, 0);
+  }
+
+  window.addEventListener('hashchange', onRouteChange);
+  onRouteChange();
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./service-worker.js').catch((err) => {
+        console.error('Service worker kaydı başarısız', err);
+      });
+    });
+  }
 }

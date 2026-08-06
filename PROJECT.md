@@ -4,8 +4,8 @@
 Hocanın haftalık verdiği antrenman programını ve kullanıcının gerçekte yaptığını takip eden, telefona kurulabilen offline PWA. Şu an manuel tutulan Excel'in yerini alacak; hocaya "ne verildi / ne yapıldı" kıyasını göstermeyi kolaylaştırmak asıl amaç.
 
 ## Faz
-**Şu an:** MVP + haftalık program görünümü + toplu program yapıştırma + egzersiz durum işareti tamamlandı, test edildi. Kullanıma hazır.
-**Sonra:** GitHub Pages'e deploy (ayrı onay gerektiren adım — repo oluşturma/push) — telefona "gerçek" bir linkle kurmak için. İstenirse placeholder ikon değiştirilebilir.
+**Şu an:** MVP + tüm ek özellikler tamamlandı, test edildi. GitHub Pages deploy süreci başladı — kullanıcı bugün salonda saha testi yapacak, bu yüzden acil.
+**Sonra:** İstenirse placeholder ikon değiştirilebilir; gerçek erişim kontrolü istenirse (GitHub Pro / Cloudflare Access) ayrı bir oturumda değerlendirilir.
 
 ## Kararlar
 - **Konum:** Bu proje, kardeş proje **Game-1**'den (ayrı bir YouTube Playables oyunu) tamamen bağımsız, kendi klasöründe.
@@ -25,6 +25,7 @@ Hocanın haftalık verdiği antrenman programını ve kullanıcının gerçekte 
 - **Egzersiz kartları akordiyon (2026-08-06 eklendi):** Kullanıcının isteği: "aynı anda bir ağırlık çalışabilirim, sadece ona odaklanmamı kolaylaştırır." `dayEntry.js`'deki egzersiz kartları artık tek seferde sadece biri açık kalacak şekilde akordiyon (başlığa tıklayınca aç/kapa, yeni bir tanesi açılınca öncekini kapatır). Kapalıyken sadece isim + (oy verilmişse) ✅/🔻 durum ikonu görünüyor — kapalı kartların gövdesi (planlanan alanlar, set satırları, not) hiç DOM'a render edilmiyor, sadece açık olan. Varsayılan: hepsi kapalı başlıyor (kullanıcı isteği — ilk açık gelmesin); yeni egzersiz eklenince o açılıyor. Açık/kapalı durumu kalıcı değil, sadece o ziyaret için.
 - **Gün tamamlama işareti (2026-08-06 eklendi):** `dayEntry.js`'de egzersiz listesinin altında "Günü Tamamla" toggle butonu — `entry.completed` (boolean) alanını değiştiriyor. Kullanıcının kendi tabiriyle "bir karşılığı olmak zorunda değil": sadece görsel bir işaret, başka hiçbir mantığı (kilitleme, hesaplama vs.) etkilemiyor. Tek etkisi: `week.js`'te o günün başlığının yanına ✅ ekleniyor, böylece haftalık görünümden hangi günlerin bittiği anlaşılıyor.
 - **Egzersiz durum işareti (2026-08-06 eklendi):** Her egzersiz instance'ında ✅ (istenildiği gibi yaptım) / 🔻 (yapamadım) üç-durumlu (boş↔good↔bad) hızlı işaret — `status` alanı, `updateInstanceStatus()`.
+- **Basit şifre ekranı (2026-08-06 eklendi):** GitHub Pages public repo gerektiriyor (ücretsiz Pages için); kullanıcı ek bir engel istedi. `js/lock.js`: `localStorage`'da `gymbn_unlocked` bayrağı yoksa `app.js` gerçek uygulamayı hiç başlatmıyor, düz bir şifre ekranı gösteriyor. **Bilinçli olarak gerçek güvenlik değil** — statik site olduğu için şifre JS kaynağında görünür durumda, sayfa kaynağından aşılabilir; kullanıcıya bu açıkça söylendi. Sadece linke tesadüfen rastlayan birini engelleyen bir katman. Asıl veri riski zaten yok: `gymbnData` (gerçek antrenman verisi) hiçbir zaman sunucuya gitmiyor, sadece kullanıcının kendi cihazında.
 - **Yerel geliştirme sunucusu:** Düz `python -m http.server` yerine `devserver.py` (bu projede) kullanılıyor — sebebi, tarayıcının `<script type="module">` dosyalarını agresif cache'lemesi (özellikle hash-routing'de sadece `#...` değişen navigasyonlarda tam sayfa yenilenmediği için eski JS çalışmaya devam edebiliyordu). `devserver.py` tüm yanıtlara `Cache-Control: no-store` ekliyor, bu sorunu çözüyor.
 - Detaylı veri şeması, dosya yapısı ve ekran tasarımları için bkz. plan dosyası: `C:\Users\mubin\.claude\plans\vivid-squishing-floyd.md`
 
@@ -40,7 +41,9 @@ Hocanın haftalık verdiği antrenman programını ve kullanıcının gerçekte 
 - [x] Placeholder ikonlar (basit dambıl motifi) — istenirse daha sonra değiştirilebilir
 - [x] Haftalık program görünümü (`#/week`) — giriş noktası hafta merkezli oldu, uçtan uca test edildi
 - [x] Toplu program yapıştırma + önizleme (`#/bulk-add`) + egzersiz durum işareti (✅/🔻) — gerçek kullanıcı metniyle test edildi
-- [ ] (Sonra) GitHub Pages'e deploy — kullanıcı onayı gerekiyor, henüz istenmedi
+- [x] Gün/hafta silme, egzersiz akordiyonu, gün tamamlama işareti — hepsi test edildi
+- [x] Basit şifre ekranı (`js/lock.js`) — test edildi, gerçek şifre değeri kullanıcıdan bekleniyor (şu an placeholder)
+- [ ] **GitHub Pages deploy (devam ediyor)** — yerel git repo hazır (`main` branch, ilk commit atıldı), kullanıcının boş bir GitHub reposu oluşturması bekleniyor, sonra push + Pages ayarları
 
 ## Kapsam Dışı (şimdilik)
 Çoklu cihaz senkron, bulut backend, kimlik doğrulama, grafik/analitik (son-sefer kıyası dışında).
