@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gymbn-v12';
+const CACHE_NAME = 'gymbn-v13';
 
 const PRECACHE_URLS = [
   './',
@@ -9,7 +9,8 @@ const PRECACHE_URLS = [
   './js/router.js',
   './js/storage.js',
   './js/util.js',
-  './js/lock.js',
+  './js/auth.js',
+  './js/cloudSync.js',
   './js/bulkParse.js',
   './js/views/dashboard.js',
   './js/views/week.js',
@@ -49,6 +50,8 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin) return; // Firebase/Google trafiğine dokunma
   if (event.request.method !== 'GET') return;
   event.respondWith(
     caches.match(event.request).then((cached) => {

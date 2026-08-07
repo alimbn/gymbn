@@ -1,4 +1,5 @@
 import { isoToDate } from './util.js';
+import { scheduleCloudPush } from './cloudSync.js';
 
 const STORAGE_KEY = 'gymbnData';
 const SCHEMA_VERSION = 1;
@@ -16,6 +17,7 @@ export function uid(prefix) {
 function defaultState() {
   return {
     schemaVersion: SCHEMA_VERSION,
+    updatedAt: 0,
     exercises: [],
     dayTypes: [
       { id: uid('dt'), name: 'Anterior-1', archived: false },
@@ -60,6 +62,7 @@ export function loadState() {
   if (!Array.isArray(state.dayTypes)) state.dayTypes = [];
   if (!Array.isArray(state.dayEntries)) state.dayEntries = [];
   if (!Array.isArray(state.payments)) state.payments = [];
+  if (typeof state.updatedAt !== 'number') state.updatedAt = 0;
   rebuildHistoryIndex();
   return state;
 }
@@ -71,8 +74,10 @@ export function getState() {
 export function saveState(debounce = true) {
   clearTimeout(saveTimer);
   const persist = () => {
+    state.updatedAt = Date.now();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     rebuildHistoryIndex();
+    scheduleCloudPush(state);
   };
   if (debounce) {
     saveTimer = setTimeout(persist, 300);

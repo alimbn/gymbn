@@ -1,7 +1,8 @@
-import { loadState } from './storage.js';
+import { loadState, getState } from './storage.js';
 import { addRoute, renderRoute } from './router.js';
 import { todayIso, mondayOfWeek } from './util.js';
-import { isUnlocked, showLockScreen } from './lock.js';
+import { boot, unlockAppShell } from './auth.js';
+import { pullRemoteIfNewer } from './cloudSync.js';
 import * as dashboard from './views/dashboard.js';
 import * as week from './views/week.js';
 import * as bulkAdd from './views/bulkAdd.js';
@@ -12,15 +13,15 @@ import * as historyView from './views/history.js';
 import * as payments from './views/payments.js';
 import * as more from './views/more.js';
 
-if (!isUnlocked()) {
-  showLockScreen();
-} else {
+boot(async () => {
+  loadState();
+  const reloading = await pullRemoteIfNewer(getState().updatedAt || 0);
+  if (reloading) return;
+  unlockAppShell();
   initApp();
-}
+});
 
 function initApp() {
-  loadState();
-
   const viewRoot = document.getElementById('view-root');
 
   addRoute(/^#\/?$/, (root) => dashboard.render(root));

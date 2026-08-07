@@ -45,17 +45,28 @@ h1, h2, h3, p {
   margin: 0;
 }
 
-/* Lock screen */
+/* Auth screen */
 
-.lock-screen {
+body.auth-gate .app-header,
+body.auth-gate .bottom-nav {
+  display: none;
+}
+
+body.auth-gate #view-root {
   min-height: 100vh;
+  padding: var(--space-4);
+  display: flex;
+}
+
+.auth-screen {
+  flex: 1;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-4);
 }
 
-.lock-card {
+.auth-card {
   width: 100%;
   max-width: 320px;
   background: var(--surface);
@@ -65,18 +76,23 @@ h1, h2, h3, p {
   text-align: center;
 }
 
-.lock-title {
+.auth-title {
   font-size: 20px;
   font-weight: 700;
   margin-bottom: var(--space-4);
 }
 
-.lock-card input[type="password"] {
+.auth-loading {
+  color: var(--text-muted);
+}
+
+.auth-card input[type="email"],
+.auth-card input[type="password"] {
   margin-bottom: var(--space-3);
   text-align: center;
 }
 
-.lock-error {
+.auth-error {
   color: var(--danger);
   font-size: 13px;
   margin-top: var(--space-3);
@@ -259,6 +275,8 @@ input[type="text"],
 input[type="date"],
 input[type="number"],
 input[type="file"],
+input[type="email"],
+input[type="password"],
 select,
 textarea {
   width: 100%;
