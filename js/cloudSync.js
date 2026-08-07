@@ -5,6 +5,7 @@ import {
   browserLocalPersistence,
   onAuthStateChanged,
   signInWithEmailAndPassword,
+  sendPasswordResetEmail,
 } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 import {
   initializeFirestore,
@@ -52,6 +53,10 @@ export function onAuthReady(callback) {
 
 export function login(email, password) {
   return signInWithEmailAndPassword(auth, email, password);
+}
+
+export function resetPassword(email) {
+  return sendPasswordResetEmail(auth, email);
 }
 
 /**

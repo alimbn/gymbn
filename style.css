@@ -98,6 +98,17 @@ body.auth-gate #view-root {
   margin-top: var(--space-3);
 }
 
+.auth-hint {
+  color: var(--success);
+  font-size: 13px;
+  margin-top: var(--space-3);
+}
+
+.auth-card .btn-ghost {
+  font-size: 13px;
+  margin-top: var(--space-2);
+}
+
 button {
   font-family: inherit;
 }
