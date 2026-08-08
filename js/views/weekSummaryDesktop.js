@@ -7,6 +7,7 @@ export function render(container, { mondayIso }) {
 
   const days = Array.from({ length: 7 }, (_, i) => addDaysIso(mondayIso, i));
   const entries = days.map((d) => getDayEntryByDate(d)).filter(Boolean);
+  const rows = groupByDayTypeFamily(entries);
 
   container.innerHTML = `
     <div class="view-header">
@@ -16,7 +17,7 @@ export function render(container, { mondayIso }) {
     </div>
     <div class="summary-range">${formatDateLongTr(mondayIso)} – ${formatDateLongTr(days[6])}</div>
     <div class="desktop-summary">
-      ${entries.length ? entries.map(buildDayTable).join('') : '<p class="empty-state">Bu haftaya henüz kayıt eklenmedi.</p>'}
+      ${entries.length ? rows.map((row) => `<div class="desktop-day-row">${row.map(buildDayTable).join('')}</div>`).join('') : '<p class="empty-state">Bu haftaya henüz kayıt eklenmedi.</p>'}
     </div>
   `;
 
@@ -85,6 +86,26 @@ function buildDayTable(entry) {
       </div>
     </div>
   `;
+}
+
+// "Anterior-1" ve "Anterior-2" gibi aynı ailenin farklı numaralı günlerini aynı
+// satırda göstermek için sondaki "-N"yi atıp temel adı çıkarıyor.
+function baseDayTypeName(entry) {
+  const dt = entry.dayTypeId ? dayTypes.byId(entry.dayTypeId) : null;
+  const name = dt ? dt.name : 'Antrenman';
+  return name.replace(/[\s-]*\d+\s*$/, '').trim() || name;
+}
+
+// Günleri temel gün-tipi adına göre gruplar; grup sırası haftadaki ilk görülme
+// sırasına göre (ilk görülen gün-tipi ailesi ilk satır olur).
+function groupByDayTypeFamily(entries) {
+  const groups = new Map();
+  entries.forEach((entry) => {
+    const key = baseDayTypeName(entry);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(entry);
+  });
+  return [...groups.values()];
 }
 
 function formatPrescribed(p) {

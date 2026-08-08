@@ -1129,6 +1129,16 @@ body.chrome-hidden #view-root {
   gap: var(--space-5);
 }
 
+.desktop-day-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.desktop-day-row .desktop-day-block {
+  flex: 1 1 620px;
+}
+
 .desktop-day-block {
   background: var(--surface);
   border: 1px solid var(--border);
