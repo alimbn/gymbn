@@ -550,6 +550,7 @@ a.list-item {
 
 .prescribed-block {
   background: var(--surface-2);
+  border: 1px solid var(--warning);
   border-radius: var(--radius-sm);
   padding: var(--space-3);
   margin-bottom: var(--space-3);
@@ -622,8 +623,40 @@ a.list-item {
   margin-top: var(--space-2);
 }
 
-.set-row-bottom .stepper {
+.number-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.number-field label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.number-field-reps {
+  flex: 3;
+}
+
+.number-field-rir {
   flex: 1;
+}
+
+.number-select {
+  width: 100%;
+  height: 40px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+  text-align: center;
+  padding: 0 4px;
+}
+
+.set-row.suggested .number-select {
+  color: var(--text-suggested);
+  font-style: italic;
 }
 
 .stepper {

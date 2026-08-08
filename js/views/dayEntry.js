@@ -129,10 +129,24 @@ function renderEntry(container, entry) {
       return;
     }
     cardsRoot.innerHTML = '';
-    entry.exercises.forEach((inst) => {
+    entry.exercises.forEach((inst, idx) => {
       const isExpanded = inst.id === expandedInstId;
-      cardsRoot.appendChild(buildExerciseCard(entry, inst, isExpanded, () => toggleExpand(inst.id), renderCards));
+      cardsRoot.appendChild(buildExerciseCard(entry, inst, isExpanded, () => toggleExpand(inst.id), renderCards, () => advanceTo(idx)));
     });
+  }
+
+  // "Nasıl gitti?" işaretlendiğinde bu kartı kapatıp bir sonraki egzersizi açar —
+  // antrenman sırasında elle kapat/aç yapmadan sırayla ilerlemek için.
+  function advanceTo(currentIdx) {
+    const next = entry.exercises[currentIdx + 1];
+    expandedInstId = next ? next.id : null;
+    renderCards();
+    if (next) {
+      requestAnimationFrame(() => {
+        const nextCardEl = cardsRoot.children[currentIdx + 1];
+        if (nextCardEl) nextCardEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
   }
 
   container.querySelector('#add-exercise-btn').addEventListener('click', () => {
@@ -156,7 +170,7 @@ function renderEntry(container, entry) {
   renderCards();
 }
 
-function buildExerciseCard(entry, inst, isExpanded, onToggle, refreshCards) {
+function buildExerciseCard(entry, inst, isExpanded, onToggle, refreshCards, onStatusSet) {
   const card = document.createElement('div');
   card.className = 'exercise-card' + (isExpanded ? ' expanded' : ' collapsed');
   const exercise = exercises.byId(inst.exerciseId);
@@ -184,13 +198,13 @@ function buildExerciseCard(entry, inst, isExpanded, onToggle, refreshCards) {
   });
 
   if (isExpanded) {
-    buildExpandedBody(card.querySelector('.exercise-card-body'), entry, inst);
+    buildExpandedBody(card.querySelector('.exercise-card-body'), entry, inst, onStatusSet);
   }
 
   return card;
 }
 
-function buildExpandedBody(bodyEl, entry, inst) {
+function buildExpandedBody(bodyEl, entry, inst, onStatusSet) {
   const last = getLastInstance(inst.exerciseId, entry.id);
 
   bodyEl.innerHTML = `
@@ -231,6 +245,7 @@ function buildExpandedBody(bodyEl, entry, inst) {
     updateInstanceStatus(entry.id, inst.id, next);
     goodBtn.classList.toggle('active', next === 'good');
     badBtn.classList.toggle('active', next === 'bad');
+    if (next !== null) onStatusSet();
   }
   goodBtn.addEventListener('click', () => setStatus('good'));
   badBtn.addEventListener('click', () => setStatus('bad'));

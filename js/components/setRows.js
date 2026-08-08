@@ -1,8 +1,9 @@
 import { addActualSet, removeActualSet, updateActualSetField } from '../storage.js';
 import { escapeHtml } from '../util.js';
 
-const STEPS = { weight: 2.5, reps: 1, rir: 1 };
-const UNITS = { weight: 'kg', reps: 'tekrar', rir: 'rir' };
+const WEIGHT_STEP = 2.5;
+const NUMBER_FIELD_MAX = { reps: 30, rir: 9 };
+const NUMBER_FIELD_LABEL = { reps: 'Tekrar', rir: 'Rir' };
 
 export function renderSetRows(container, { dayId, instId, inst }) {
   renderAll();
@@ -32,23 +33,37 @@ export function renderSetRows(container, { dayId, instId, inst }) {
         <span class="set-row-label">Set ${idx + 1}</span>
         <button type="button" class="btn-icon danger set-row-remove" aria-label="Seti sil">×</button>
       </div>
-      ${buildStepper('weight', set.weight)}
+      ${buildWeightStepper(set.weight)}
       <div class="set-row-bottom">
-        ${buildStepper('reps', set.reps)}
-        ${buildStepper('rir', set.rir)}
+        ${buildNumberField('reps', set.reps)}
+        ${buildNumberField('rir', set.rir)}
       </div>
     `;
     wireRow(row);
     return row;
   }
 
-  function buildStepper(field, value) {
+  function buildWeightStepper(value) {
     return `
-      <div class="stepper" data-field="${field}">
+      <div class="stepper" data-field="weight">
         <button type="button" class="stepper-btn" data-action="dec" aria-label="Azalt">−</button>
-        <input type="text" class="stepper-input" data-field="${field}" value="${escapeHtml(value ?? '')}">
-        <span class="stepper-unit">${UNITS[field]}</span>
+        <input type="text" class="set-field stepper-input" data-field="weight" value="${escapeHtml(value ?? '')}">
+        <span class="stepper-unit">kg</span>
         <button type="button" class="stepper-btn" data-action="inc" aria-label="Artır">+</button>
+      </div>
+    `;
+  }
+
+  function buildNumberField(field, value) {
+    const current = parseInt(value, 10);
+    let options = '';
+    for (let i = 0; i <= NUMBER_FIELD_MAX[field]; i++) {
+      options += `<option value="${i}"${i === current ? ' selected' : ''}>${i}</option>`;
+    }
+    return `
+      <div class="number-field number-field-${field}">
+        <label>${NUMBER_FIELD_LABEL[field]}</label>
+        <select class="set-field number-select" data-field="${field}">${options}</select>
       </div>
     `;
   }
@@ -61,30 +76,32 @@ export function renderSetRows(container, { dayId, instId, inst }) {
       renderAll();
     });
 
-    row.querySelectorAll('.stepper').forEach((stepperEl) => {
-      const field = stepperEl.dataset.field;
-      const input = stepperEl.querySelector('.stepper-input');
-
-      input.addEventListener('focus', () => input.select());
-
-      input.addEventListener('input', () => {
-        updateActualSetField(dayId, instId, setIndex, field, input.value, true);
+    const weightInput = row.querySelector('.stepper-input[data-field="weight"]');
+    weightInput.addEventListener('focus', () => weightInput.select());
+    weightInput.addEventListener('input', () => {
+      updateActualSetField(dayId, instId, setIndex, 'weight', weightInput.value, true);
+      row.classList.remove('suggested');
+      syncLaterRows(setIndex);
+    });
+    row.querySelector('.stepper[data-field="weight"]').querySelectorAll('.stepper-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const current = parseFloat(weightInput.value);
+        const base = isNaN(current) ? 0 : current;
+        const dir = btn.dataset.action === 'inc' ? 1 : -1;
+        const next = Math.max(0, Math.round((base + dir * WEIGHT_STEP) * 100) / 100);
+        weightInput.value = String(next);
+        updateActualSetField(dayId, instId, setIndex, 'weight', weightInput.value, false);
         row.classList.remove('suggested');
         syncLaterRows(setIndex);
       });
+    });
 
-      stepperEl.querySelectorAll('.stepper-btn').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const step = STEPS[field];
-          const current = parseFloat(input.value);
-          const base = isNaN(current) ? 0 : current;
-          const dir = btn.dataset.action === 'inc' ? 1 : -1;
-          const next = Math.max(0, Math.round((base + dir * step) * 100) / 100);
-          input.value = String(next);
-          updateActualSetField(dayId, instId, setIndex, field, input.value, false);
-          row.classList.remove('suggested');
-          syncLaterRows(setIndex);
-        });
+    row.querySelectorAll('.number-select').forEach((select) => {
+      select.addEventListener('change', () => {
+        const field = select.dataset.field;
+        updateActualSetField(dayId, instId, setIndex, field, select.value, false);
+        row.classList.remove('suggested');
+        syncLaterRows(setIndex);
       });
     });
   }
@@ -95,9 +112,9 @@ export function renderSetRows(container, { dayId, instId, inst }) {
       if (idx <= fromIndex || set.touched) return;
       const rowEl = rowEls[idx];
       if (!rowEl) return;
-      rowEl.querySelectorAll('.stepper-input').forEach((inp) => {
-        if (document.activeElement === inp) return;
-        inp.value = set[inp.dataset.field];
+      rowEl.querySelectorAll('.set-field').forEach((el) => {
+        if (document.activeElement === el) return;
+        el.value = set[el.dataset.field];
       });
     });
   }

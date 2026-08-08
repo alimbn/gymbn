@@ -187,11 +187,25 @@ function findInstance(dayId, instId) {
   return entry ? entry.exercises.find((e) => e.id === instId) || null : null;
 }
 
+// "Yapılan" set alanları artık sayısal seçiciler (reps 0-30, rir 0-9) — prescribed
+// serbest metin olabildiği için ("8-9", "75sn", "tükenene kadar") ilk sayıyı çıkarıp
+// makul bir başlangıç değerine indirgiyoruz; kullanıcı zaten seçiciden düzeltebilir.
+function extractLeadingInt(str, fallback) {
+  const match = String(str ?? '').match(/\d+/);
+  return match ? parseInt(match[0], 10) : fallback;
+}
+
+function clampRir(n) {
+  return Math.max(0, Math.min(9, n));
+}
+
 function buildActualSetsFromPrescribed(prescribed) {
   const count = Math.max(1, Number(prescribed.setCount) || 1);
+  const reps = String(extractLeadingInt(prescribed.reps, 0));
+  const rir = String(clampRir(extractLeadingInt(prescribed.rir, 0)));
   const rows = [];
   for (let i = 0; i < count; i++) {
-    rows.push({ weight: prescribed.weight, reps: prescribed.reps, rir: prescribed.rir, touched: false });
+    rows.push({ weight: prescribed.weight, reps, rir, touched: false });
   }
   return rows;
 }
@@ -213,7 +227,7 @@ export function addExerciseInstance(dayId, exerciseId) {
   const last = getLastInstance(exerciseId, dayId);
   const prescribed = last
     ? { ...last.prescribed }
-    : { weight: '', setCount: 3, reps: '', rir: '' };
+    : { weight: '', setCount: 3, reps: '', rir: '0' };
   const inst = buildInstance(exerciseId, prescribed);
   entry.exercises.push(inst);
   saveState(false);
@@ -266,7 +280,12 @@ export function addActualSet(dayId, instId) {
   const last = inst.actualSets[inst.actualSets.length - 1];
   inst.actualSets.push(last
     ? { weight: last.weight, reps: last.reps, rir: last.rir, touched: false }
-    : { weight: inst.prescribed.weight, reps: inst.prescribed.reps, rir: inst.prescribed.rir, touched: false });
+    : {
+      weight: inst.prescribed.weight,
+      reps: String(extractLeadingInt(inst.prescribed.reps, 0)),
+      rir: String(clampRir(extractLeadingInt(inst.prescribed.rir, 0))),
+      touched: false,
+    });
   saveState(false);
 }
 
