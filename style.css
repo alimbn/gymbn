@@ -539,7 +539,33 @@ a.list-item {
 
 .exercise-status-icon {
   flex-shrink: 0;
-  font-size: 16px;
+  display: inline-flex;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+}
+
+.status-badge-good {
+  background: var(--success);
+}
+
+.status-badge-bad {
+  background: var(--danger);
+}
+
+.status-badge-neutral {
+  background: var(--warning);
 }
 
 .last-time {

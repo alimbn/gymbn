@@ -3,7 +3,7 @@ import {
   dayTypes, exercises, addExerciseInstance, removeExerciseInstance, updateInstancePrescribed,
   updateInstanceNote, updateInstanceStatus, getLastInstance,
 } from '../storage.js';
-import { dayOfWeekLabel, formatDateShortTr, escapeHtml } from '../util.js';
+import { dayOfWeekLabel, formatDateShortTr, escapeHtml, statusBadge } from '../util.js';
 import { renderSetRows } from '../components/setRows.js';
 import { openPicker } from '../components/picker.js';
 
@@ -174,13 +174,12 @@ function buildExerciseCard(entry, inst, isExpanded, onToggle, refreshCards, onSt
   const card = document.createElement('div');
   card.className = 'exercise-card' + (isExpanded ? ' expanded' : ' collapsed');
   const exercise = exercises.byId(inst.exerciseId);
-  const statusIcon = inst.status === 'good' ? '✅' : inst.status === 'bad' ? '🔻' : '';
 
   card.innerHTML = `
     <div class="exercise-card-header">
       <span class="accordion-chevron">${isExpanded ? '▾' : '▸'}</span>
       <span class="exercise-name">${escapeHtml(exercise ? exercise.name : '(silinmiş egzersiz)')}</span>
-      ${statusIcon ? `<span class="exercise-status-icon">${statusIcon}</span>` : ''}
+      <span class="exercise-status-icon">${statusBadge(inst.status)}</span>
       <button type="button" class="btn-icon danger remove-exercise-btn" aria-label="Egzersizi sil">🗑</button>
     </div>
     <div class="exercise-card-body"></div>

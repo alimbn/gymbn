@@ -63,6 +63,14 @@ export function setAppChromeHidden(hidden) {
   document.body.classList.toggle('chrome-hidden', hidden);
 }
 
+// Egzersiz durumunu (good/bad/null) her yerde aynı görünen tek bir rozete çeviriyor:
+// yeşil ✓ (good), kırmızı ▼ (bad), turuncu − (henüz işaretlenmedi).
+export function statusBadge(status) {
+  if (status === 'good') return '<span class="status-badge status-badge-good">✓</span>';
+  if (status === 'bad') return '<span class="status-badge status-badge-bad">▼</span>';
+  return '<span class="status-badge status-badge-neutral">−</span>';
+}
+
 export function escapeHtml(str) {
   return String(str ?? '').replace(/[&<>"']/g, (ch) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',

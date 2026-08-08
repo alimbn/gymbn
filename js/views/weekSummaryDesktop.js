@@ -1,5 +1,5 @@
 import { getDayEntryByDate, dayTypes, exercises } from '../storage.js';
-import { addDaysIso, dayOfWeekLabel, formatDateLongTr, escapeHtml, setViewportZoomable, setAppChromeHidden } from '../util.js';
+import { addDaysIso, dayOfWeekLabel, formatDateLongTr, escapeHtml, setViewportZoomable, setAppChromeHidden, statusBadge } from '../util.js';
 
 export function render(container, { mondayIso }) {
   setViewportZoomable(true);
@@ -42,11 +42,10 @@ function buildDayTable(entry) {
 
   const rows = entry.exercises.map((inst) => {
     const exercise = exercises.byId(inst.exerciseId);
-    const statusIcon = inst.status === 'good' ? ' ✅' : inst.status === 'bad' ? ' 🔻' : '';
     return `
       <tr>
         <td class="desktop-ex-name">
-          <div>${escapeHtml(exercise ? exercise.name : '(silinmiş egzersiz)')}${statusIcon}</div>
+          <div>${escapeHtml(exercise ? exercise.name : '(silinmiş egzersiz)')} ${statusBadge(inst.status)}</div>
           <div class="desktop-ex-prescribed">${escapeHtml(formatPrescribed(inst.prescribed))}</div>
         </td>
         <td>${escapeHtml(joinSetValues(inst.actualSets, 'weight'))}</td>

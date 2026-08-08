@@ -1,5 +1,5 @@
 import { getDayEntryByDate, dayTypes, exercises } from '../storage.js';
-import { addDaysIso, dayOfWeekLabel, formatDateShortTr, formatDateLongTr, escapeHtml, setViewportZoomable } from '../util.js';
+import { addDaysIso, dayOfWeekLabel, formatDateShortTr, formatDateLongTr, escapeHtml, setViewportZoomable, statusBadge } from '../util.js';
 
 export function render(container, { mondayIso }) {
   setViewportZoomable(true);
@@ -52,10 +52,9 @@ function buildDaySummary(entry) {
 
 function buildExerciseSummary(inst) {
   const exercise = exercises.byId(inst.exerciseId);
-  const statusIcon = inst.status === 'good' ? ' ✅' : inst.status === 'bad' ? ' 🔻' : '';
   return `
     <div class="summary-exercise">
-      <div class="summary-exercise-name">${escapeHtml(exercise ? exercise.name : '(silinmiş egzersiz)')}${statusIcon}</div>
+      <div class="summary-exercise-name">${escapeHtml(exercise ? exercise.name : '(silinmiş egzersiz)')} ${statusBadge(inst.status)}</div>
       <div class="summary-exercise-row"><span class="summary-label">Planlanan:</span> ${escapeHtml(formatPrescribed(inst.prescribed))}</div>
       <div class="summary-exercise-row"><span class="summary-label">Yapılan:</span> ${escapeHtml(formatActual(inst.actualSets))}</div>
       ${inst.note ? `<div class="summary-exercise-note">"${escapeHtml(inst.note)}"</div>` : ''}
