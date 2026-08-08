@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gymbn-v14';
+const CACHE_NAME = 'gymbn-v15';
 
 const PRECACHE_URLS = [
   './',
@@ -15,6 +15,7 @@ const PRECACHE_URLS = [
   './js/views/dashboard.js',
   './js/views/week.js',
   './js/views/weekSummary.js',
+  './js/views/weekSummaryDesktop.js',
   './js/views/bulkAdd.js',
   './js/views/dayEntry.js',
   './js/views/exerciseLibrary.js',

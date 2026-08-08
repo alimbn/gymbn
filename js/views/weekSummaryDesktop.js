@@ -1,0 +1,95 @@
+import { getDayEntryByDate, dayTypes, exercises } from '../storage.js';
+import { addDaysIso, dayOfWeekLabel, formatDateLongTr, escapeHtml, setViewportZoomable } from '../util.js';
+
+export function render(container, { mondayIso }) {
+  setViewportZoomable(true);
+
+  const days = Array.from({ length: 7 }, (_, i) => addDaysIso(mondayIso, i));
+  const entries = days.map((d) => getDayEntryByDate(d)).filter(Boolean);
+
+  container.innerHTML = `
+    <div class="view-header">
+      <button type="button" class="back-link" id="back-btn" aria-label="Geri">←</button>
+      <h2 class="view-title">Masaüstü Özeti</h2>
+      <span></span>
+    </div>
+    <div class="summary-range">${formatDateLongTr(mondayIso)} – ${formatDateLongTr(days[6])}</div>
+    <div class="desktop-summary">
+      ${entries.length ? entries.map(buildDayTable).join('') : '<p class="empty-state">Bu haftaya henüz kayıt eklenmedi.</p>'}
+    </div>
+  `;
+
+  container.querySelector('#back-btn').addEventListener('click', () => {
+    history.back();
+  });
+}
+
+function buildDayTable(entry) {
+  const dt = entry.dayTypeId ? dayTypes.byId(entry.dayTypeId) : null;
+  const titleParts = [dt ? dt.name : null, entry.dayNumber ? `${entry.dayNumber}. Gün` : null].filter(Boolean);
+  const header = `${titleParts.join(' · ') || 'Antrenman'} — ${formatDateLongTr(entry.date)}, ${dayOfWeekLabel(entry.date)}${entry.completed ? ' ✅' : ''}`;
+
+  if (!entry.exercises.length) {
+    return `
+      <div class="desktop-day-block">
+        <div class="desktop-day-header">${escapeHtml(header)}</div>
+        <p class="empty-state">Egzersiz eklenmedi.</p>
+      </div>
+    `;
+  }
+
+  const rows = entry.exercises.map((inst) => {
+    const exercise = exercises.byId(inst.exerciseId);
+    const statusIcon = inst.status === 'good' ? ' ✅' : inst.status === 'bad' ? ' 🔻' : '';
+    return `
+      <tr>
+        <td class="desktop-ex-name">
+          <div>${escapeHtml(exercise ? exercise.name : '(silinmiş egzersiz)')}${statusIcon}</div>
+          <div class="desktop-ex-prescribed">${escapeHtml(formatPrescribed(inst.prescribed))}</div>
+        </td>
+        <td>${escapeHtml(joinSetValues(inst.actualSets, 'weight'))}</td>
+        <td>${inst.actualSets.length || '-'}</td>
+        <td>${escapeHtml(joinSetValues(inst.actualSets, 'reps'))}</td>
+        <td>${escapeHtml(joinSetValues(inst.actualSets, 'rir'))}</td>
+        <td class="desktop-ex-note">${escapeHtml(inst.note)}</td>
+      </tr>
+    `;
+  }).join('');
+
+  return `
+    <div class="desktop-day-block">
+      <div class="desktop-day-header">${escapeHtml(header)}</div>
+      <div class="desktop-table-scroll">
+        <table class="desktop-table">
+          <thead>
+            <tr>
+              <th>Egzersiz</th>
+              <th>Ağırlık</th>
+              <th>Set</th>
+              <th>Tekrar</th>
+              <th>Rir</th>
+              <th>Not</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function formatPrescribed(p) {
+  const parts = [];
+  if (p.setCount) parts.push(`${p.setCount} set`);
+  if (p.reps) parts.push(`${p.reps} tekrar`);
+  if (p.weight) parts.push(p.weight);
+  if (p.rir) parts.push(`rir ${p.rir}`);
+  return parts.join(' · ') || '-';
+}
+
+function joinSetValues(actualSets, field) {
+  if (!actualSets.length) return '-';
+  const values = actualSets.map((s) => s[field] || '-');
+  const unique = [...new Set(values)];
+  return unique.length === 1 ? unique[0] : values.join(' # ');
+}

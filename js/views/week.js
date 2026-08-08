@@ -26,6 +26,7 @@ export function render(container, { mondayIso }) {
     <a href="#/bulk-add/${mondayIso}" class="btn btn-block bulk-add-link">📋 Programı Yapıştır</a>
     <div class="week-grid" id="week-grid"></div>
     ${existingEntries.length ? `<a href="#/week/${mondayIso}/summary" class="btn btn-block week-summary-link">📄 Haftalık Özet</a>` : ''}
+    ${existingEntries.length ? `<a href="#/week/${mondayIso}/summary-desktop" class="btn btn-block week-summary-link">🖥️ Masaüstü Özeti</a>` : ''}
     ${existingEntries.length ? '<button type="button" class="btn btn-danger btn-block week-clear-btn" id="clear-week-btn">Bu Haftadaki Tüm Günleri Sil</button>' : ''}
   `;
 

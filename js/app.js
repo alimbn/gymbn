@@ -6,6 +6,7 @@ import { pullRemoteIfNewer } from './cloudSync.js';
 import * as dashboard from './views/dashboard.js';
 import * as week from './views/week.js';
 import * as weekSummary from './views/weekSummary.js';
+import * as weekSummaryDesktop from './views/weekSummaryDesktop.js';
 import * as bulkAdd from './views/bulkAdd.js';
 import * as dayEntry from './views/dayEntry.js';
 import * as exerciseLibrary from './views/exerciseLibrary.js';
@@ -33,6 +34,7 @@ function initApp() {
   });
   addRoute(/^#\/week\/([^/]+)$/, (root, match) => week.render(root, { mondayIso: match[1] }));
   addRoute(/^#\/week\/([^/]+)\/summary$/, (root, match) => weekSummary.render(root, { mondayIso: match[1] }));
+  addRoute(/^#\/week\/([^/]+)\/summary-desktop$/, (root, match) => weekSummaryDesktop.render(root, { mondayIso: match[1] }));
   addRoute(/^#\/bulk-add$/, (root) => bulkAdd.render(root, { mondayIso: mondayOfWeek(todayIso()) }));
   addRoute(/^#\/bulk-add\/([^/]+)$/, (root, match) => bulkAdd.render(root, { mondayIso: match[1] }));
   addRoute(/^#\/day\/([^/]+)$/, (root, match) => dayEntry.render(root, { id: match[1] }));
