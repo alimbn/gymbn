@@ -1,8 +1,9 @@
 import { getDayEntryByDate, dayTypes, exercises } from '../storage.js';
-import { addDaysIso, dayOfWeekLabel, formatDateLongTr, escapeHtml, setViewportZoomable } from '../util.js';
+import { addDaysIso, dayOfWeekLabel, formatDateLongTr, escapeHtml, setViewportZoomable, setAppChromeHidden } from '../util.js';
 
 export function render(container, { mondayIso }) {
   setViewportZoomable(true);
+  setAppChromeHidden(true);
 
   const days = Array.from({ length: 7 }, (_, i) => addDaysIso(mondayIso, i));
   const entries = days.map((d) => getDayEntryByDate(d)).filter(Boolean);
@@ -61,6 +62,14 @@ function buildDayTable(entry) {
       <div class="desktop-day-header">${escapeHtml(header)}</div>
       <div class="desktop-table-scroll">
         <table class="desktop-table">
+          <colgroup>
+            <col style="width:28%">
+            <col style="width:13%">
+            <col style="width:7%">
+            <col style="width:15%">
+            <col style="width:9%">
+            <col style="width:28%">
+          </colgroup>
           <thead>
             <tr>
               <th>Egzersiz</th>

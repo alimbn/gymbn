@@ -59,6 +59,10 @@ export function setViewportZoomable(zoomable) {
   if (meta) meta.setAttribute('content', zoomable ? VIEWPORT_ZOOMABLE : VIEWPORT_LOCKED);
 }
 
+export function setAppChromeHidden(hidden) {
+  document.body.classList.toggle('chrome-hidden', hidden);
+}
+
 export function escapeHtml(str) {
   return String(str ?? '').replace(/[&<>"']/g, (ch) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',

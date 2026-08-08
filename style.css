@@ -1113,6 +1113,16 @@ a.list-item {
 
 /* Masaüstü özeti (tablo görünümü) */
 
+body.chrome-hidden .app-header,
+body.chrome-hidden .bottom-nav {
+  display: none;
+}
+
+body.chrome-hidden #view-root {
+  min-height: 100vh;
+  padding: var(--space-4);
+}
+
 .desktop-summary {
   display: flex;
   flex-direction: column;
@@ -1137,6 +1147,8 @@ a.list-item {
 
 .desktop-table {
   width: 100%;
+  min-width: 640px;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -1146,7 +1158,7 @@ a.list-item {
   padding: 8px 10px;
   border-bottom: 1px solid var(--border);
   text-align: left;
-  white-space: nowrap;
+  overflow-wrap: break-word;
 }
 
 .desktop-table th {
@@ -1157,7 +1169,6 @@ a.list-item {
 }
 
 .desktop-ex-name {
-  white-space: normal;
   min-width: 160px;
 }
 
