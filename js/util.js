@@ -51,6 +51,14 @@ export function normalizeForMatch(str) {
     .replace(/\s+/g, ' ');
 }
 
+const VIEWPORT_LOCKED = 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover';
+const VIEWPORT_ZOOMABLE = 'width=device-width, initial-scale=1, viewport-fit=cover';
+
+export function setViewportZoomable(zoomable) {
+  const meta = document.querySelector('meta[name="viewport"]');
+  if (meta) meta.setAttribute('content', zoomable ? VIEWPORT_ZOOMABLE : VIEWPORT_LOCKED);
+}
+
 export function escapeHtml(str) {
   return String(str ?? '').replace(/[&<>"']/g, (ch) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',

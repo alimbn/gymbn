@@ -1011,3 +1011,102 @@ a.list-item {
   font-size: 13px;
   padding: 8px 10px;
 }
+
+/* Haftalık özet */
+
+.week-summary-link {
+  margin-bottom: var(--space-4);
+}
+
+.summary-range {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-bottom: var(--space-4);
+}
+
+.summary-overview {
+  display: flex;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.summary-stat {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  text-align: center;
+}
+
+.summary-stat strong {
+  display: block;
+  font-size: 22px;
+}
+
+.summary-stat span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.summary-stat.good strong {
+  color: var(--success);
+}
+
+.summary-stat.bad strong {
+  color: var(--danger);
+}
+
+.summary-days {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.summary-day {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+}
+
+.summary-day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-weight: 700;
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.summary-exercise {
+  padding: var(--space-2) 0;
+}
+
+.summary-exercise + .summary-exercise {
+  border-top: 1px dashed var(--border);
+}
+
+.summary-exercise-name {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.summary-exercise-row {
+  font-size: 14px;
+}
+
+.summary-label {
+  color: var(--text-muted);
+}
+
+.summary-exercise-note {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 2px;
+}
