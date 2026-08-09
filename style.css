@@ -1253,3 +1253,41 @@ body.chrome-hidden #view-root {
   font-style: italic;
   min-width: 140px;
 }
+
+/* Dinlenme kronometresi (floating, sürüklenebilir) */
+
+.rest-timer-btn {
+  position: fixed;
+  right: var(--space-4);
+  bottom: calc(var(--nav-h) + var(--safe-bottom) + var(--space-4));
+  z-index: 15;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid var(--primary);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  touch-action: none;
+  user-select: none;
+}
+
+.rest-timer-btn.running {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-text);
+}
+
+.rest-timer-btn.dragging {
+  opacity: 0.85;
+}
+
+body.auth-gate .rest-timer-btn,
+body.chrome-hidden .rest-timer-btn {
+  display: none;
+}

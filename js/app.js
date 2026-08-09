@@ -14,6 +14,7 @@ import * as dayTypeLibrary from './views/dayTypeLibrary.js';
 import * as historyView from './views/history.js';
 import * as payments from './views/payments.js';
 import * as more from './views/more.js';
+import { initRestTimer } from './components/restTimer.js';
 
 boot(async () => {
   loadState();
@@ -65,6 +66,10 @@ function initApp() {
 
   window.addEventListener('hashchange', onRouteChange);
   onRouteChange();
+
+  // #view-root'un dışında, document.body'ye doğrudan ekleniyor — böylece
+  // router her navigasyonda #view-root'u temizlese de kronometre kaybolmuyor.
+  initRestTimer();
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
