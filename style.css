@@ -1261,14 +1261,14 @@ body.chrome-hidden #view-root {
   right: var(--space-4);
   bottom: calc(var(--nav-h) + var(--safe-bottom) + var(--space-4));
   z-index: 15;
-  width: 64px;
-  height: 64px;
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
-  border: 2px solid var(--primary);
+  border: 3px solid var(--primary);
   background: var(--surface);
   color: var(--text);
   font-family: inherit;
-  font-size: 15px;
+  font-size: 22px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
@@ -1281,10 +1281,21 @@ body.chrome-hidden #view-root {
   background: var(--primary);
   border-color: var(--primary);
   color: var(--primary-text);
+  animation: rest-timer-pulse 1.8s ease-in-out infinite;
 }
 
 .rest-timer-btn.dragging {
   opacity: 0.85;
+  animation: none;
+}
+
+@keyframes rest-timer-pulse {
+  0%, 100% {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 0 0 rgba(91, 140, 255, 0.55);
+  }
+  50% {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 0 16px rgba(91, 140, 255, 0);
+  }
 }
 
 body.auth-gate .rest-timer-btn,
