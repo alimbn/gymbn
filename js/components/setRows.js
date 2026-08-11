@@ -55,17 +55,47 @@ export function renderSetRows(container, { dayId, instId, inst }) {
   }
 
   function buildNumberField(field, value) {
-    const current = parseInt(value, 10);
-    let options = '';
-    for (let i = 0; i <= NUMBER_FIELD_MAX[field]; i++) {
-      options += `<option value="${i}"${i === current ? ' selected' : ''}>${i}</option>`;
-    }
     return `
       <div class="number-field number-field-${field}">
         <label>${NUMBER_FIELD_LABEL[field]}</label>
-        <select class="set-field number-select" data-field="${field}">${options}</select>
+        <button type="button" class="set-field number-picker-trigger" data-field="${field}">${escapeHtml(value ?? '0')}</button>
       </div>
     `;
+  }
+
+  function openNumberPicker({ title, max, current, onSelect }) {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'sheet-backdrop';
+    let cells = '';
+    for (let i = 0; i <= max; i++) {
+      cells += `<button type="button" class="number-picker-cell${i === current ? ' selected' : ''}" data-value="${i}">${i}</button>`;
+    }
+    backdrop.innerHTML = `
+      <div class="sheet">
+        <div class="sheet-title">${escapeHtml(title)}</div>
+        <div class="number-picker-grid">${cells}</div>
+        <button type="button" class="btn btn-block sheet-close">Kapat</button>
+      </div>
+    `;
+    document.body.appendChild(backdrop);
+
+    function close() {
+      backdrop.remove();
+    }
+
+    backdrop.querySelector('.number-picker-grid').addEventListener('click', (e) => {
+      const cell = e.target.closest('.number-picker-cell');
+      if (!cell) return;
+      onSelect(Number(cell.dataset.value));
+      close();
+    });
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) close();
+    });
+    backdrop.querySelector('.sheet-close').addEventListener('click', close);
+
+    const selectedEl = backdrop.querySelector('.number-picker-cell.selected');
+    if (selectedEl) selectedEl.scrollIntoView({ block: 'center' });
   }
 
   function wireRow(row) {
@@ -96,12 +126,21 @@ export function renderSetRows(container, { dayId, instId, inst }) {
       });
     });
 
-    row.querySelectorAll('.number-select').forEach((select) => {
-      select.addEventListener('change', () => {
-        const field = select.dataset.field;
-        updateActualSetField(dayId, instId, setIndex, field, select.value, false);
-        row.classList.remove('suggested');
-        syncLaterRows(setIndex);
+    row.querySelectorAll('.number-picker-trigger').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const field = btn.dataset.field;
+        const current = parseInt(btn.textContent, 10);
+        openNumberPicker({
+          title: NUMBER_FIELD_LABEL[field],
+          max: NUMBER_FIELD_MAX[field],
+          current: isNaN(current) ? -1 : current,
+          onSelect: (value) => {
+            btn.textContent = String(value);
+            updateActualSetField(dayId, instId, setIndex, field, String(value), false);
+            row.classList.remove('suggested');
+            syncLaterRows(setIndex);
+          },
+        });
       });
     });
   }
@@ -114,7 +153,9 @@ export function renderSetRows(container, { dayId, instId, inst }) {
       if (!rowEl) return;
       rowEl.querySelectorAll('.set-field').forEach((el) => {
         if (document.activeElement === el) return;
-        el.value = set[el.dataset.field];
+        const val = set[el.dataset.field];
+        if (el.tagName === 'BUTTON') el.textContent = val;
+        else el.value = val;
       });
     });
   }
