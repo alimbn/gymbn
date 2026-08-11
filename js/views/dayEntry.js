@@ -3,7 +3,7 @@ import {
   dayTypes, exercises, addExerciseInstance, removeExerciseInstance, updateInstancePrescribed,
   updateInstanceNote, updateInstanceStatus, getLastInstance,
 } from '../storage.js';
-import { dayOfWeekLabel, formatDateShortTr, escapeHtml, statusBadge } from '../util.js';
+import { dayOfWeekLabel, formatDateShortTr, escapeHtml, statusBadge, formatDuration } from '../util.js';
 import { renderSetRows } from '../components/setRows.js';
 import { openPicker } from '../components/picker.js';
 
@@ -50,6 +50,10 @@ function renderEntry(container, entry) {
       <p class="view-subtitle" id="weekday-label"></p>
     </div>
 
+    <div class="card workout-timer-card">
+      <div id="workout-timer-content"></div>
+    </div>
+
     <div class="section">
       <div class="section-title">Egzersizler</div>
       <div id="exercise-cards"></div>
@@ -69,6 +73,40 @@ function renderEntry(container, entry) {
     weekdayLabel.textContent = entry.date ? dayOfWeekLabel(entry.date) : '';
   }
   updateWeekdayLabel();
+
+  // Antrenman süresi: workoutStartedAt bir zaman damgası, geçen süre her tick'te
+  // Date.now()'dan hesaplanıyor — sekme arka plana alınsa/kapatılsa bile doğru kalır.
+  const workoutTimerContent = container.querySelector('#workout-timer-content');
+  let workoutTickInterval = null;
+
+  function renderWorkoutTimer() {
+    clearInterval(workoutTickInterval);
+    if (entry.workoutDurationSec) {
+      workoutTimerContent.innerHTML = `<div class="workout-timer-done">✅ Antrenman süresi: <strong>${formatDuration(entry.workoutDurationSec)}</strong></div>`;
+      return;
+    }
+    if (entry.workoutStartedAt) {
+      workoutTimerContent.innerHTML = `<div class="workout-timer-running">⏱ Antrenman sürüyor: <strong id="workout-elapsed"></strong></div>`;
+      const elapsedEl = workoutTimerContent.querySelector('#workout-elapsed');
+      const tick = () => {
+        if (!elapsedEl.isConnected) {
+          clearInterval(workoutTickInterval);
+          return;
+        }
+        elapsedEl.textContent = formatDuration((Date.now() - entry.workoutStartedAt) / 1000);
+      };
+      tick();
+      workoutTickInterval = setInterval(tick, 1000);
+      return;
+    }
+    workoutTimerContent.innerHTML = `<button type="button" class="btn btn-primary btn-block" id="start-workout-btn">▶ Antrenmana Başla</button>`;
+    workoutTimerContent.querySelector('#start-workout-btn').addEventListener('click', () => {
+      entry.workoutStartedAt = Date.now();
+      updateDayEntryField(entry.id, 'workoutStartedAt', entry.workoutStartedAt, false);
+      renderWorkoutTimer();
+    });
+  }
+  renderWorkoutTimer();
 
   container.querySelector('#back-btn').addEventListener('click', () => {
     history.back();
@@ -99,8 +137,9 @@ function renderEntry(container, entry) {
     updateDayEntryField(entry.id, 'dayTypeId', entry.dayTypeId, false);
   });
 
-  // "Complete" is a plain flag with no other effect — purely so the week view can
-  // show at a glance which days are done. Doesn't lock editing or anything else.
+  // "Complete" is a plain flag — purely so the week view can show at a glance which
+  // days are done, doesn't lock editing. Its one side effect: the first time it's
+  // turned on, it stops the workout timer (if running) and locks in the duration.
   const completeBtn = container.querySelector('#complete-day-btn');
   function updateCompleteBtn() {
     completeBtn.textContent = entry.completed ? '✅ Gün Tamamlandı' : 'Günü Tamamla';
@@ -109,6 +148,11 @@ function renderEntry(container, entry) {
   updateCompleteBtn();
   completeBtn.addEventListener('click', () => {
     entry.completed = !entry.completed;
+    if (entry.completed && entry.workoutStartedAt && !entry.workoutDurationSec) {
+      entry.workoutDurationSec = Math.round((Date.now() - entry.workoutStartedAt) / 1000);
+      updateDayEntryField(entry.id, 'workoutDurationSec', entry.workoutDurationSec, false);
+      renderWorkoutTimer();
+    }
     updateDayEntryField(entry.id, 'completed', entry.completed, false);
     updateCompleteBtn();
   });

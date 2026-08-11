@@ -847,6 +847,26 @@ a.list-item {
   color: var(--success);
 }
 
+/* Antrenman süresi */
+
+.workout-timer-card {
+  margin-bottom: var(--space-4);
+}
+
+.workout-timer-running,
+.workout-timer-done {
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.workout-timer-running strong,
+.workout-timer-done strong {
+  font-size: 18px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Notes */
 
 .note-toggle {

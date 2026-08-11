@@ -71,6 +71,15 @@ export function statusBadge(status) {
   return '<span class="status-badge status-badge-neutral">−</span>';
 }
 
+export function formatDuration(totalSeconds) {
+  const s = Math.max(0, Math.round(totalSeconds));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) return `${h}:${pad2(m)}:${pad2(sec)}`;
+  return `${m}:${pad2(sec)}`;
+}
+
 export function escapeHtml(str) {
   return String(str ?? '').replace(/[&<>"']/g, (ch) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
