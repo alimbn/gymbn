@@ -771,10 +771,12 @@ a.list-item {
   appearance: none;
   border: 1px solid var(--border);
   background: var(--surface-2);
+  color: var(--text);
   border-radius: var(--radius-sm);
   width: 40px;
   height: 40px;
   font-size: 18px;
+  font-weight: 700;
   line-height: 1;
   cursor: pointer;
   opacity: 0.5;
@@ -782,16 +784,22 @@ a.list-item {
 
 .status-btn.active {
   opacity: 1;
+  color: #fff;
 }
 
 .status-btn-good.active {
-  background: rgba(76, 175, 130, 0.18);
+  background: var(--success);
   border-color: var(--success);
 }
 
 .status-btn-bad.active {
-  background: rgba(239, 83, 80, 0.18);
+  background: var(--danger);
   border-color: var(--danger);
+}
+
+.status-btn-neutral.active {
+  background: var(--warning);
+  border-color: var(--warning);
 }
 
 .day-complete-btn {

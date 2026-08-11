@@ -220,8 +220,9 @@ function buildExpandedBody(bodyEl, entry, inst, onStatusSet) {
     <div class="set-rows-mount"></div>
     <div class="status-row">
       <span class="status-row-label">Nasıl gitti?</span>
-      <button type="button" class="status-btn status-btn-good${inst.status === 'good' ? ' active' : ''}" aria-label="İstenildiği gibi yaptım">✅</button>
-      <button type="button" class="status-btn status-btn-bad${inst.status === 'bad' ? ' active' : ''}" aria-label="Yapamadım">🔻</button>
+      <button type="button" class="status-btn status-btn-good${inst.status === 'good' ? ' active' : ''}" aria-label="İstenildiği gibi yaptım">✓</button>
+      <button type="button" class="status-btn status-btn-bad${inst.status === 'bad' ? ' active' : ''}" aria-label="Yapamadım">▼</button>
+      <button type="button" class="status-btn status-btn-neutral${inst.status === 'neutral' ? ' active' : ''}" aria-label="Fena değildi">−</button>
     </div>
     <button type="button" class="note-toggle">${inst.note ? '− Notu Gizle' : '+ Not Ekle'}</button>
     <textarea class="note-textarea" placeholder="Not..." style="display:${inst.note ? 'block' : 'none'}">${escapeHtml(inst.note)}</textarea>
@@ -238,16 +239,19 @@ function buildExpandedBody(bodyEl, entry, inst, onStatusSet) {
 
   const goodBtn = bodyEl.querySelector('.status-btn-good');
   const badBtn = bodyEl.querySelector('.status-btn-bad');
+  const neutralBtn = bodyEl.querySelector('.status-btn-neutral');
   function setStatus(status) {
     const next = inst.status === status ? null : status;
     inst.status = next;
     updateInstanceStatus(entry.id, inst.id, next);
     goodBtn.classList.toggle('active', next === 'good');
     badBtn.classList.toggle('active', next === 'bad');
+    neutralBtn.classList.toggle('active', next === 'neutral');
     if (next !== null) onStatusSet();
   }
   goodBtn.addEventListener('click', () => setStatus('good'));
   badBtn.addEventListener('click', () => setStatus('bad'));
+  neutralBtn.addEventListener('click', () => setStatus('neutral'));
 
   const noteToggle = bodyEl.querySelector('.note-toggle');
   const noteTextarea = bodyEl.querySelector('.note-textarea');
