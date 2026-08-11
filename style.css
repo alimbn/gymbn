@@ -509,6 +509,7 @@ a.list-item {
   border-radius: var(--radius);
   padding: var(--space-3);
   margin-bottom: var(--space-3);
+  scroll-margin-top: calc(var(--header-h) + var(--safe-top) + var(--space-3));
 }
 
 .exercise-card-header {
