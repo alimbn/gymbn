@@ -223,6 +223,7 @@ function buildExerciseCard(entry, inst, isExpanded, onToggle, refreshCards, onSt
     <div class="exercise-card-header">
       <span class="accordion-chevron">${isExpanded ? '▾' : '▸'}</span>
       <span class="exercise-name">${escapeHtml(exercise ? exercise.name : '(silinmiş egzersiz)')}</span>
+      ${(inst.note || inst.prescribed.coachNote) ? '<span class="note-indicator" aria-label="Not var">💬</span>' : ''}
       <span class="exercise-status-icon">${statusBadge(inst.status)}</span>
       <button type="button" class="btn-icon danger remove-exercise-btn" aria-label="Egzersizi sil">🗑</button>
     </div>

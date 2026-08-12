@@ -543,6 +543,12 @@ a.list-item {
   display: inline-flex;
 }
 
+.note-indicator {
+  flex-shrink: 0;
+  font-size: 13px;
+  opacity: 0.85;
+}
+
 .status-badge {
   display: inline-flex;
   align-items: center;
