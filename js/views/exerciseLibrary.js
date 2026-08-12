@@ -7,5 +7,6 @@ export function render(container) {
     store: exercises,
     placeholder: 'Yeni egzersiz adı',
     backHref: '#/more',
+    showDurationToggle: true,
   });
 }

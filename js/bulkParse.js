@@ -43,11 +43,14 @@ export function parseExerciseLine(rawLine) {
   // 4. "olana kadar tekrar" (reps-until-RIR phrase) — target already captured by rir above.
   line = line.replace(UNTIL_RIR_PHRASE_RE, ' ');
 
-  // 5. Time-based reps ("75sn").
+  // 5. Time-based reps ("75sn") — bare number, exercises.isDuration + the UI label
+  // (Süre/sn) carry the unit now instead of baking "sn" into the stored string.
   let reps = '';
+  let detectedDuration = false;
   const timeMatch = line.match(TIME_RE);
   if (timeMatch) {
-    reps = timeMatch[1] + 'sn';
+    reps = timeMatch[1];
+    detectedDuration = true;
     line = line.replace(timeMatch[0], ' ');
   }
 
@@ -78,7 +81,7 @@ export function parseExerciseLine(rawLine) {
   // 9. Whatever remains is the exercise name.
   const name = collapseSpaces(line);
 
-  return { name, setCount, reps, rir, weight, coachNote };
+  return { name, setCount, reps, rir, weight, coachNote, detectedDuration };
 }
 
 export function parseWeeklyProgramText(text) {

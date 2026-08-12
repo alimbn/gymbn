@@ -269,6 +269,15 @@ button {
   color: var(--danger);
 }
 
+.duration-toggle-btn {
+  opacity: 0.4;
+}
+
+.duration-toggle-btn.active {
+  opacity: 1;
+  color: var(--primary);
+}
+
 /* Forms */
 
 .field {
@@ -780,6 +789,17 @@ a.list-item {
 .set-row.suggested .stepper-input {
   color: var(--text-suggested);
   font-style: italic;
+}
+
+.stepper-group {
+  margin-top: var(--space-2);
+}
+
+.stepper-group label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
 }
 
 .set-row-remove {

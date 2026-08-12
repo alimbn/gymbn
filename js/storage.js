@@ -88,8 +88,8 @@ export function saveState(debounce = true) {
 
 /* ---------- Exercise & day-type libraries (shared shape) ---------- */
 
-function createLibraryItem(collectionKey, prefix, name) {
-  const item = { id: uid(prefix), name: name.trim(), archived: false };
+function createLibraryItem(collectionKey, prefix, name, extra = {}) {
+  const item = { id: uid(prefix), name: name.trim(), archived: false, ...extra };
   state[collectionKey].push(item);
   saveState(false);
   return item;
@@ -118,9 +118,15 @@ function libraryItemById(collectionKey, id) {
 }
 
 export const exercises = {
-  add: (name) => createLibraryItem('exercises', 'ex', name),
+  add: (name, isDuration = false) => createLibraryItem('exercises', 'ex', name, { isDuration }),
   rename: (id, name) => renameLibraryItem('exercises', id, name),
   archive: (id) => archiveLibraryItem('exercises', id),
+  setDuration: (id, isDuration) => {
+    const item = libraryItemById('exercises', id);
+    if (!item) return;
+    item.isDuration = isDuration;
+    saveState(false);
+  },
   active: () => activeLibraryItems('exercises'),
   all: () => state.exercises,
   byId: (id) => libraryItemById('exercises', id),
@@ -199,10 +205,13 @@ function clampRir(n) {
   return Math.max(0, Math.min(9, n));
 }
 
-function buildActualSetsFromPrescribed(prescribed) {
+// Süre-bazlı egzersizlerde rir alanı "rezerv saniye" anlamına geldiği için
+// (bkz. exercises.isDuration) 0-9'a sıkıştırılmıyor, sadece negatif olamıyor.
+function buildActualSetsFromPrescribed(prescribed, isDuration) {
   const count = Math.max(1, Number(prescribed.setCount) || 1);
   const reps = String(extractLeadingInt(prescribed.reps, 0));
-  const rir = String(clampRir(extractLeadingInt(prescribed.rir, 0)));
+  const rirValue = extractLeadingInt(prescribed.rir, 0);
+  const rir = String(isDuration ? Math.max(0, rirValue) : clampRir(rirValue));
   const rows = [];
   for (let i = 0; i < count; i++) {
     rows.push({ weight: prescribed.weight, reps, rir, touched: false });
@@ -211,13 +220,15 @@ function buildActualSetsFromPrescribed(prescribed) {
 }
 
 function buildInstance(exerciseId, prescribed) {
+  const exercise = libraryItemById('exercises', exerciseId);
+  const isDuration = !!(exercise && exercise.isDuration);
   return {
     id: uid('exi'),
     exerciseId,
     note: '',
     status: null,
     prescribed,
-    actualSets: buildActualSetsFromPrescribed(prescribed),
+    actualSets: buildActualSetsFromPrescribed(prescribed, isDuration),
   };
 }
 
@@ -255,7 +266,8 @@ export function updateInstancePrescribed(dayId, instId, field, value, debounce =
   if (!inst) return;
   inst.prescribed[field] = value;
   if (inst.actualSets.every((s) => !s.touched)) {
-    inst.actualSets = buildActualSetsFromPrescribed(inst.prescribed);
+    const exercise = libraryItemById('exercises', inst.exerciseId);
+    inst.actualSets = buildActualSetsFromPrescribed(inst.prescribed, !!(exercise && exercise.isDuration));
   }
   saveState(debounce);
 }
@@ -277,13 +289,17 @@ export function updateInstanceStatus(dayId, instId, status) {
 export function addActualSet(dayId, instId) {
   const inst = findInstance(dayId, instId);
   if (!inst) return;
+  const exercise = libraryItemById('exercises', inst.exerciseId);
+  const isDuration = !!(exercise && exercise.isDuration);
   const last = inst.actualSets[inst.actualSets.length - 1];
   inst.actualSets.push(last
     ? { weight: last.weight, reps: last.reps, rir: last.rir, touched: false }
     : {
       weight: inst.prescribed.weight,
       reps: String(extractLeadingInt(inst.prescribed.reps, 0)),
-      rir: String(clampRir(extractLeadingInt(inst.prescribed.rir, 0))),
+      rir: String(isDuration
+        ? Math.max(0, extractLeadingInt(inst.prescribed.rir, 0))
+        : clampRir(extractLeadingInt(inst.prescribed.rir, 0))),
       touched: false,
     });
   saveState(false);

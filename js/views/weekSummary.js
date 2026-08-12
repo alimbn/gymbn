@@ -52,30 +52,31 @@ function buildDaySummary(entry) {
 
 function buildExerciseSummary(inst) {
   const exercise = exercises.byId(inst.exerciseId);
+  const isDuration = !!(exercise && exercise.isDuration);
   return `
     <div class="summary-exercise">
       <div class="summary-exercise-name">${escapeHtml(exercise ? exercise.name : '(silinmiş egzersiz)')} ${statusBadge(inst.status)}</div>
-      <div class="summary-exercise-row"><span class="summary-label">Planlanan:</span> ${escapeHtml(formatPrescribed(inst.prescribed))}</div>
-      <div class="summary-exercise-row"><span class="summary-label">Yapılan:</span> ${escapeHtml(formatActual(inst.actualSets))}</div>
+      <div class="summary-exercise-row"><span class="summary-label">Planlanan:</span> ${escapeHtml(formatPrescribed(inst.prescribed, isDuration))}</div>
+      <div class="summary-exercise-row"><span class="summary-label">Yapılan:</span> ${escapeHtml(formatActual(inst.actualSets, isDuration))}</div>
       ${inst.note ? `<div class="summary-exercise-note">"${escapeHtml(inst.note)}"</div>` : ''}
     </div>
   `;
 }
 
-function formatPrescribed(p) {
+function formatPrescribed(p, isDuration) {
   const parts = [];
   if (p.weight) parts.push(p.weight);
   if (p.setCount) parts.push(`${p.setCount} set`);
-  if (p.reps) parts.push(`${p.reps} tekrar`);
-  if (p.rir) parts.push(`rir ${p.rir}`);
+  if (p.reps) parts.push(isDuration ? `${p.reps}sn` : `${p.reps} tekrar`);
+  if (p.rir) parts.push(isDuration ? `rezerv ${p.rir}sn` : `rir ${p.rir}`);
   return parts.join(' · ') || '-';
 }
 
-function formatActual(actualSets) {
+function formatActual(actualSets, isDuration) {
   if (!actualSets.length) return '-';
   return actualSets.map((s) => {
-    let str = `${s.weight || '-'}×${s.reps || '-'}`;
-    if (s.rir) str += ` (rir ${s.rir})`;
+    let str = `${s.weight || '-'}×${s.reps || '-'}${isDuration ? 'sn' : ''}`;
+    if (s.rir) str += isDuration ? ` (rezerv ${s.rir}sn)` : ` (rir ${s.rir})`;
     return str;
   }).join(', ');
 }

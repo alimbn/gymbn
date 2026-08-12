@@ -250,16 +250,20 @@ function buildExerciseCard(entry, inst, isExpanded, onToggle, refreshCards, onSt
 
 function buildExpandedBody(bodyEl, entry, inst, onStatusSet) {
   const last = getLastInstance(inst.exerciseId, entry.id);
+  const exercise = exercises.byId(inst.exerciseId);
+  const isDuration = !!(exercise && exercise.isDuration);
+  const repsLabel = isDuration ? 'Süre (sn)' : 'Tekrar';
+  const rirLabel = isDuration ? 'Rezerv (sn)' : 'Rir';
 
   bodyEl.innerHTML = `
-    <div class="last-time">${last ? `Son sefer (${formatDateShortTr(last.date)}): ${formatSetsSummary(last.actualSets)}` : 'İlk kez yapılıyor.'}</div>
+    <div class="last-time">${last ? `Son sefer (${formatDateShortTr(last.date)}): ${formatSetsSummary(last.actualSets, isDuration)}` : 'İlk kez yapılıyor.'}</div>
     <div class="prescribed-block">
       <div class="block-label">Planlanan (Hoca)</div>
       <div class="prescribed-fields">
         <div class="field"><label>Ağırlık</label><input type="text" class="presc-input" data-field="weight" value="${escapeHtml(inst.prescribed.weight)}"></div>
         <div class="field"><label>Set</label><input type="number" class="presc-input" data-field="setCount" min="1" inputmode="numeric" value="${inst.prescribed.setCount ?? ''}"></div>
-        <div class="field"><label>Tekrar</label><input type="text" class="presc-input" data-field="reps" value="${escapeHtml(inst.prescribed.reps)}"></div>
-        <div class="field"><label>Rir</label><input type="text" class="presc-input" data-field="rir" value="${escapeHtml(inst.prescribed.rir)}"></div>
+        <div class="field"><label>${repsLabel}</label><input type="text" class="presc-input" data-field="reps" value="${escapeHtml(inst.prescribed.reps)}"></div>
+        <div class="field"><label>${rirLabel}</label><input type="text" class="presc-input" data-field="rir" value="${escapeHtml(inst.prescribed.rir)}"></div>
       </div>
       <div class="field prescribed-note-field">
         <label>Hoca Notu</label>
@@ -316,11 +320,11 @@ function buildExpandedBody(bodyEl, entry, inst, onStatusSet) {
 
   const setRowsMount = bodyEl.querySelector('.set-rows-mount');
   function mountSetRows() {
-    renderSetRows(setRowsMount, { dayId: entry.id, instId: inst.id, inst });
+    renderSetRows(setRowsMount, { dayId: entry.id, instId: inst.id, inst, isDuration });
   }
   mountSetRows();
 }
 
-function formatSetsSummary(actualSets) {
-  return actualSets.map((s) => `${s.weight || '-'}×${s.reps || '-'}`).join(', ');
+function formatSetsSummary(actualSets, isDuration) {
+  return actualSets.map((s) => `${s.weight || '-'}×${s.reps || '-'}${isDuration ? 'sn' : ''}`).join(', ');
 }

@@ -217,7 +217,9 @@ function commitBlocks(blocks) {
       if (!ex.name) continue;
       const normalized = normalizeForMatch(ex.name);
       let exercise = exercises.active().find((e) => normalizeForMatch(e.name) === normalized);
-      if (!exercise) exercise = exercises.add(ex.name);
+      // Sadece YENİ oluşturulan bir egzersiz için süre tipi otomatik ayarlanıyor —
+      // zaten var olan bir eşleşmenin tipini sürpriz şekilde değiştirmiyoruz.
+      if (!exercise) exercise = exercises.add(ex.name, ex.detectedDuration);
       addExerciseInstanceWithPrescribed(
         entry.id,
         exercise.id,

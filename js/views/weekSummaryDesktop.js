@@ -42,16 +42,17 @@ function buildDayTable(entry) {
 
   const rows = entry.exercises.map((inst) => {
     const exercise = exercises.byId(inst.exerciseId);
+    const isDuration = !!(exercise && exercise.isDuration);
     return `
       <tr>
         <td class="desktop-ex-name">
           <div>${escapeHtml(exercise ? exercise.name : '(silinmiş egzersiz)')} ${statusBadge(inst.status)}</div>
-          <div class="desktop-ex-prescribed">${escapeHtml(formatPrescribed(inst.prescribed))}</div>
+          <div class="desktop-ex-prescribed">${escapeHtml(formatPrescribed(inst.prescribed, isDuration))}</div>
         </td>
         <td>${escapeHtml(joinSetValues(inst.actualSets, 'weight'))}</td>
         <td>${inst.actualSets.length || '-'}</td>
-        <td>${escapeHtml(joinSetValues(inst.actualSets, 'reps'))}</td>
-        <td>${escapeHtml(joinSetValues(inst.actualSets, 'rir'))}</td>
+        <td>${escapeHtml(joinSetValues(inst.actualSets, 'reps', isDuration ? 'sn' : ''))}</td>
+        <td>${escapeHtml(joinSetValues(inst.actualSets, 'rir', isDuration ? 'sn' : ''))}</td>
         <td class="desktop-ex-note">${escapeHtml(inst.note)}</td>
       </tr>
     `;
@@ -107,18 +108,18 @@ function groupByDayTypeFamily(entries) {
   return [...groups.values()];
 }
 
-function formatPrescribed(p) {
+function formatPrescribed(p, isDuration) {
   const parts = [];
   if (p.setCount) parts.push(`${p.setCount} set`);
-  if (p.reps) parts.push(`${p.reps} tekrar`);
+  if (p.reps) parts.push(isDuration ? `${p.reps}sn` : `${p.reps} tekrar`);
   if (p.weight) parts.push(p.weight);
-  if (p.rir) parts.push(`rir ${p.rir}`);
+  if (p.rir) parts.push(isDuration ? `rezerv ${p.rir}sn` : `rir ${p.rir}`);
   return parts.join(' · ') || '-';
 }
 
-function joinSetValues(actualSets, field) {
+function joinSetValues(actualSets, field, suffix = '') {
   if (!actualSets.length) return '-';
-  const values = actualSets.map((s) => s[field] || '-');
+  const values = actualSets.map((s) => (s[field] ? s[field] + suffix : '-'));
   const unique = [...new Set(values)];
   return unique.length === 1 ? unique[0] : values.join(' # ');
 }

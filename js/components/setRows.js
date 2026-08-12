@@ -2,10 +2,11 @@ import { addActualSet, removeActualSet, updateActualSetField } from '../storage.
 import { escapeHtml } from '../util.js';
 
 const WEIGHT_STEP = 2.5;
+const DURATION_STEP = 5;
 const NUMBER_FIELD_MAX = { reps: 30, rir: 9 };
 const NUMBER_FIELD_LABEL = { reps: 'Tekrar', rir: 'Rir' };
 
-export function renderSetRows(container, { dayId, instId, inst }) {
+export function renderSetRows(container, { dayId, instId, inst, isDuration }) {
   renderAll();
 
   function renderAll() {
@@ -28,27 +29,44 @@ export function renderSetRows(container, { dayId, instId, inst }) {
     const row = document.createElement('div');
     row.className = 'set-row' + (set.touched ? '' : ' suggested');
     row.dataset.setIndex = String(idx);
+    const bottomFields = isDuration
+      ? buildLabeledStepper('reps', set.reps, { step: DURATION_STEP, unit: 'sn', label: 'Süre' })
+        + buildLabeledStepper('rir', set.rir, { step: DURATION_STEP, unit: 'sn', label: 'Rezerv' })
+      : `<div class="set-row-bottom">
+          ${buildNumberField('reps', set.reps)}
+          ${buildNumberField('rir', set.rir)}
+        </div>`;
     row.innerHTML = `
       <div class="set-row-head">
         <span class="set-row-label">Set ${idx + 1}</span>
         <button type="button" class="btn-icon danger set-row-remove" aria-label="Seti sil">×</button>
       </div>
       ${buildWeightStepper(set.weight)}
-      <div class="set-row-bottom">
-        ${buildNumberField('reps', set.reps)}
-        ${buildNumberField('rir', set.rir)}
-      </div>
+      ${bottomFields}
     `;
     wireRow(row);
     return row;
   }
 
   function buildWeightStepper(value) {
+    return buildStepper('weight', value, { step: WEIGHT_STEP, unit: 'kg' });
+  }
+
+  function buildLabeledStepper(field, value, { step, unit, label }) {
     return `
-      <div class="stepper" data-field="weight">
+      <div class="stepper-group">
+        <label>${label}</label>
+        ${buildStepper(field, value, { step, unit })}
+      </div>
+    `;
+  }
+
+  function buildStepper(field, value, { step, unit }) {
+    return `
+      <div class="stepper" data-field="${field}" data-step="${step}">
         <button type="button" class="stepper-btn" data-action="dec" aria-label="Azalt">−</button>
-        <input type="text" class="set-field stepper-input" data-field="weight" value="${escapeHtml(value ?? '')}">
-        <span class="stepper-unit">kg</span>
+        <input type="text" class="set-field stepper-input" data-field="${field}" value="${escapeHtml(value ?? '')}">
+        <span class="stepper-unit">${unit}</span>
         <button type="button" class="stepper-btn" data-action="inc" aria-label="Artır">+</button>
       </div>
     `;
@@ -106,23 +124,29 @@ export function renderSetRows(container, { dayId, instId, inst }) {
       renderAll();
     });
 
-    const weightInput = row.querySelector('.stepper-input[data-field="weight"]');
-    weightInput.addEventListener('focus', () => weightInput.select());
-    weightInput.addEventListener('input', () => {
-      updateActualSetField(dayId, instId, setIndex, 'weight', weightInput.value, true);
-      row.classList.remove('suggested');
-      syncLaterRows(setIndex);
-    });
-    row.querySelector('.stepper[data-field="weight"]').querySelectorAll('.stepper-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const current = parseFloat(weightInput.value);
-        const base = isNaN(current) ? 0 : current;
-        const dir = btn.dataset.action === 'inc' ? 1 : -1;
-        const next = Math.max(0, Math.round((base + dir * WEIGHT_STEP) * 100) / 100);
-        weightInput.value = String(next);
-        updateActualSetField(dayId, instId, setIndex, 'weight', weightInput.value, false);
+    // Ağırlık her zaman, süre/rezerv sadece isDuration'da bir stepper — hepsi aynı
+    // jenerik döngüyle kabloanıyor, adım büyüklüğü data-step'ten okunuyor.
+    row.querySelectorAll('.stepper').forEach((stepperEl) => {
+      const field = stepperEl.dataset.field;
+      const step = parseFloat(stepperEl.dataset.step);
+      const input = stepperEl.querySelector('.stepper-input');
+      input.addEventListener('focus', () => input.select());
+      input.addEventListener('input', () => {
+        updateActualSetField(dayId, instId, setIndex, field, input.value, true);
         row.classList.remove('suggested');
         syncLaterRows(setIndex);
+      });
+      stepperEl.querySelectorAll('.stepper-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const current = parseFloat(input.value);
+          const base = isNaN(current) ? 0 : current;
+          const dir = btn.dataset.action === 'inc' ? 1 : -1;
+          const next = Math.max(0, Math.round((base + dir * step) * 100) / 100);
+          input.value = String(next);
+          updateActualSetField(dayId, instId, setIndex, field, input.value, false);
+          row.classList.remove('suggested');
+          syncLaterRows(setIndex);
+        });
       });
     });
 
