@@ -68,7 +68,7 @@ function buildSlot(date, isToday) {
       <div class="week-slot-sub">${entry.exercises.length} egzersiz</div>
     `;
   } else {
-    body = '<div class="week-slot-add">+ Gün Ekle</div>';
+    body = '<div class="week-slot-add">+</div>';
   }
   return `
     <div class="week-slot ${stateClass}${isToday ? ' today' : ''}" data-date="${date}">

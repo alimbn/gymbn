@@ -3,7 +3,7 @@ import {
   dayTypes, exercises, addExerciseInstance, removeExerciseInstance, updateInstancePrescribed,
   updateInstanceNote, updateInstanceStatus, getLastInstance,
 } from '../storage.js';
-import { dayOfWeekLabel, formatDateShortTr, escapeHtml, statusBadge, formatDuration } from '../util.js';
+import { dayOfWeekLabel, formatDateShortTr, escapeHtml, statusBadge, formatDuration, ICON_TRASH, ICON_NOTE } from '../util.js';
 import { renderSetRows } from '../components/setRows.js';
 import { openPicker } from '../components/picker.js';
 
@@ -27,7 +27,7 @@ function renderEntry(container, entry) {
     <div class="view-header">
       <button type="button" class="back-link" id="back-btn" aria-label="Geri">←</button>
       <h2 class="view-title">Antrenman</h2>
-      <button type="button" class="btn-icon danger" id="delete-day-btn" aria-label="Günü sil">🗑</button>
+      <button type="button" class="btn-icon danger" id="delete-day-btn" aria-label="Günü sil">${ICON_TRASH}</button>
     </div>
     <div class="card">
       <div class="form-row">
@@ -223,9 +223,9 @@ function buildExerciseCard(entry, inst, isExpanded, onToggle, refreshCards, onSt
     <div class="exercise-card-header">
       <span class="accordion-chevron">${isExpanded ? '▾' : '▸'}</span>
       <span class="exercise-name">${escapeHtml(exercise ? exercise.name : '(silinmiş egzersiz)')}</span>
-      ${(inst.note || inst.prescribed.coachNote) ? '<span class="note-indicator" aria-label="Not var">💬</span>' : ''}
+      ${(inst.note || inst.prescribed.coachNote) ? `<span class="note-indicator" aria-label="Not var">${ICON_NOTE}</span>` : ''}
       <span class="exercise-status-icon">${statusBadge(inst.status)}</span>
-      <button type="button" class="btn-icon danger remove-exercise-btn" aria-label="Egzersizi sil">🗑</button>
+      <button type="button" class="btn-icon danger remove-exercise-btn" aria-label="Egzersizi sil">${ICON_TRASH}</button>
     </div>
     <div class="exercise-card-body"></div>
   `;
@@ -258,7 +258,7 @@ function buildExpandedBody(bodyEl, entry, inst, onStatusSet) {
   bodyEl.innerHTML = `
     <div class="last-time">${last ? `Son sefer (${formatDateShortTr(last.date)}): ${formatSetsSummary(last.actualSets, isDuration)}` : 'İlk kez yapılıyor.'}</div>
     <div class="prescribed-block">
-      <div class="block-label">Planlanan (Hoca)</div>
+      <div class="block-label">Hoca</div>
       <div class="prescribed-fields">
         <div class="field"><label>Ağırlık</label><input type="text" class="presc-input" data-field="weight" value="${escapeHtml(inst.prescribed.weight)}"></div>
         <div class="field"><label>Set</label><input type="number" class="presc-input" data-field="setCount" min="1" inputmode="numeric" value="${inst.prescribed.setCount ?? ''}"></div>

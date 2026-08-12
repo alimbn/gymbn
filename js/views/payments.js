@@ -1,5 +1,5 @@
 import { getPayments, addPayment, deletePayment, getPaymentCycleStatus } from '../storage.js';
-import { formatDateLongTr, todayIso } from '../util.js';
+import { formatDateLongTr, todayIso, ICON_TRASH } from '../util.js';
 
 export function render(container) {
   container.innerHTML = `
@@ -57,7 +57,7 @@ export function render(container) {
           ${p.amount ? `<div class="list-item-sub">${p.amount}</div>` : ''}
         </div>
         <div class="list-item-actions">
-          <button type="button" class="btn-icon danger delete-btn" aria-label="Sil">🗑</button>
+          <button type="button" class="btn-icon danger delete-btn" aria-label="Sil">${ICON_TRASH}</button>
         </div>
       </div>
     `).join('');

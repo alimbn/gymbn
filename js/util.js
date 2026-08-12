@@ -71,6 +71,12 @@ export function statusBadge(status) {
   return '<span class="status-badge status-badge-neutral">−</span>';
 }
 
+// Çizgili SVG ikonlar — emoji yerine (tema/işletim sistemine göre tutarsız
+// görünmesinler diye), currentColor kullanıyorlar ki her yerde çevredeki metin
+// rengini otomatik alsınlar.
+export const ICON_TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h16M9 6V4h6v2M6 6l1 14h10l1-14"/></svg>';
+export const ICON_NOTE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 11.5a8.4 8.4 0 0 1-8.9 8.4 9 9 0 0 1-3.6-.7L3 20l1-4.7a8.3 8.3 0 0 1-.9-3.8A8.4 8.4 0 0 1 12 3a8.3 8.3 0 0 1 9 8.5Z"/></svg>';
+
 export function formatDuration(totalSeconds) {
   const s = Math.max(0, Math.round(totalSeconds));
   const h = Math.floor(s / 3600);

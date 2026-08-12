@@ -1,4 +1,4 @@
-import { escapeHtml } from '../util.js';
+import { escapeHtml, ICON_TRASH } from '../util.js';
 
 export function renderLibraryList(container, { title, store, placeholder, backHref, showDurationToggle }) {
   container.innerHTML = `
@@ -33,7 +33,7 @@ export function renderLibraryList(container, { title, store, placeholder, backHr
         <div class="list-item-actions">
           ${showDurationToggle ? `<button type="button" class="btn-icon duration-toggle-btn${item.isDuration ? ' active' : ''}" aria-label="Süre-bazlı egzersiz" title="Süre-bazlı egzersiz">⏱</button>` : ''}
           <button type="button" class="btn-icon edit-btn" aria-label="Düzenle">✎</button>
-          <button type="button" class="btn-icon danger delete-btn" aria-label="Sil">🗑</button>
+          <button type="button" class="btn-icon danger delete-btn" aria-label="Sil">${ICON_TRASH}</button>
         </div>
       </div>
     `).join('');
