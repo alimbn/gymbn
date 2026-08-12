@@ -13,13 +13,14 @@ function collapseSpaces(str) {
 
 export function parseExerciseLine(rawLine) {
   let line = rawLine;
-  let note = '';
+  let coachNote = '';
 
   // 1. Parenthetical content: weight-clarification (e.g. "(15x15kg)") stays in the
-  // line for the weight regex to absorb; anything else becomes a free-text note.
+  // line for the weight regex to absorb; anything else is a remark from the coach's
+  // own program text, so it becomes coachNote — not the athlete's personal note.
   line = line.replace(/\(([^)]*)\)/g, (match, inner) => {
     if (WEIGHT_CLARIFICATION_RE.test(inner.trim())) return match;
-    note = note ? note + '; ' + inner.trim() : inner.trim();
+    coachNote = coachNote ? coachNote + '; ' + inner.trim() : inner.trim();
     return ' ';
   });
 
@@ -77,7 +78,7 @@ export function parseExerciseLine(rawLine) {
   // 9. Whatever remains is the exercise name.
   const name = collapseSpaces(line);
 
-  return { name, setCount, reps, rir, weight, note };
+  return { name, setCount, reps, rir, weight, coachNote };
 }
 
 export function parseWeeklyProgramText(text) {

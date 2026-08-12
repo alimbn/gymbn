@@ -260,6 +260,10 @@ function buildExpandedBody(bodyEl, entry, inst, onStatusSet) {
         <div class="field"><label>Tekrar</label><input type="text" class="presc-input" data-field="reps" value="${escapeHtml(inst.prescribed.reps)}"></div>
         <div class="field"><label>Rir</label><input type="text" class="presc-input" data-field="rir" value="${escapeHtml(inst.prescribed.rir)}"></div>
       </div>
+      <div class="field prescribed-note-field">
+        <label>Hoca Notu</label>
+        <input type="text" class="presc-input" data-field="coachNote" value="${escapeHtml(inst.prescribed.coachNote || '')}" placeholder="—">
+      </div>
     </div>
     <div class="set-rows-mount"></div>
     <div class="status-row">

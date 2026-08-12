@@ -210,11 +210,11 @@ function buildActualSetsFromPrescribed(prescribed) {
   return rows;
 }
 
-function buildInstance(exerciseId, prescribed, note = '') {
+function buildInstance(exerciseId, prescribed) {
   return {
     id: uid('exi'),
     exerciseId,
-    note,
+    note: '',
     status: null,
     prescribed,
     actualSets: buildActualSetsFromPrescribed(prescribed),
@@ -234,10 +234,10 @@ export function addExerciseInstance(dayId, exerciseId) {
   return inst;
 }
 
-export function addExerciseInstanceWithPrescribed(dayId, exerciseId, prescribed, note = '') {
+export function addExerciseInstanceWithPrescribed(dayId, exerciseId, prescribed) {
   const entry = getDayEntryById(dayId);
   if (!entry) return null;
-  const inst = buildInstance(exerciseId, prescribed, note);
+  const inst = buildInstance(exerciseId, prescribed);
   entry.exercises.push(inst);
   saveState(false);
   return inst;

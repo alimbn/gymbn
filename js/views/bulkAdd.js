@@ -171,7 +171,7 @@ function buildExerciseRow(ex, block, exList) {
       <input type="text" class="bulk-ex-field" data-field="reps" value="${escapeHtml(ex.reps)}" placeholder="Tekrar">
       <input type="text" class="bulk-ex-field" data-field="rir" value="${escapeHtml(ex.rir)}" placeholder="Rir">
     </div>
-    <input type="text" class="bulk-ex-note" value="${escapeHtml(ex.note)}" placeholder="Not (opsiyonel)">
+    <input type="text" class="bulk-ex-note" value="${escapeHtml(ex.coachNote)}" placeholder="Hoca notu (opsiyonel)">
   `;
 
   row.querySelector('.bulk-ex-name').addEventListener('input', (e) => {
@@ -184,7 +184,7 @@ function buildExerciseRow(ex, block, exList) {
     });
   });
   row.querySelector('.bulk-ex-note').addEventListener('input', (e) => {
-    ex.note = e.target.value;
+    ex.coachNote = e.target.value;
   });
   row.querySelector('.bulk-ex-remove').addEventListener('click', () => {
     const idx = Array.from(exList.children).indexOf(row);
@@ -221,8 +221,7 @@ function commitBlocks(blocks) {
       addExerciseInstanceWithPrescribed(
         entry.id,
         exercise.id,
-        { weight: ex.weight, setCount: ex.setCount, reps: ex.reps, rir: ex.rir },
-        ex.note,
+        { weight: ex.weight, setCount: ex.setCount, reps: ex.reps, rir: ex.rir, coachNote: ex.coachNote },
       );
     }
   }
