@@ -320,7 +320,10 @@ function buildExpandedBody(bodyEl, entry, inst, onStatusSet) {
 
   const setRowsMount = bodyEl.querySelector('.set-rows-mount');
   function mountSetRows() {
-    renderSetRows(setRowsMount, { dayId: entry.id, instId: inst.id, inst, isDuration });
+    renderSetRows(setRowsMount, {
+      dayId: entry.id, instId: inst.id, inst, isDuration,
+      exerciseName: exercise ? exercise.name : '',
+    });
   }
   mountSetRows();
 }

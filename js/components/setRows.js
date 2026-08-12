@@ -1,12 +1,13 @@
 import { addActualSet, removeActualSet, updateActualSetField } from '../storage.js';
 import { escapeHtml } from '../util.js';
+import { openCountdown } from './countdownTimer.js';
 
 const WEIGHT_STEP = 2.5;
 const DURATION_STEP = 5;
 const NUMBER_FIELD_MAX = { reps: 30, rir: 9 };
 const NUMBER_FIELD_LABEL = { reps: 'Tekrar', rir: 'Rir' };
 
-export function renderSetRows(container, { dayId, instId, inst, isDuration }) {
+export function renderSetRows(container, { dayId, instId, inst, isDuration, exerciseName }) {
   renderAll();
 
   function renderAll() {
@@ -30,7 +31,7 @@ export function renderSetRows(container, { dayId, instId, inst, isDuration }) {
     row.className = 'set-row' + (set.touched ? '' : ' suggested');
     row.dataset.setIndex = String(idx);
     const bottomFields = isDuration
-      ? buildLabeledStepper('reps', set.reps, { step: DURATION_STEP, unit: 'sn', label: 'Süre' })
+      ? buildLabeledStepper('reps', set.reps, { step: DURATION_STEP, unit: 'sn', label: 'Süre', withTimer: true })
         + buildLabeledStepper('rir', set.rir, { step: DURATION_STEP, unit: 'sn', label: 'Rezerv' })
       : `<div class="set-row-bottom">
           ${buildNumberField('reps', set.reps)}
@@ -52,10 +53,10 @@ export function renderSetRows(container, { dayId, instId, inst, isDuration }) {
     return buildStepper('weight', value, { step: WEIGHT_STEP, unit: 'kg' });
   }
 
-  function buildLabeledStepper(field, value, { step, unit, label }) {
+  function buildLabeledStepper(field, value, { step, unit, label, withTimer }) {
     return `
       <div class="stepper-group">
-        <label>${label}</label>
+        <label>${label}${withTimer ? ' <button type="button" class="countdown-trigger-btn" data-field="' + field + '" aria-label="Geri sayımı başlat">▶</button>' : ''}</label>
         ${buildStepper(field, value, { step, unit })}
       </div>
     `;
@@ -149,6 +150,15 @@ export function renderSetRows(container, { dayId, instId, inst, isDuration }) {
         });
       });
     });
+
+    const countdownBtn = row.querySelector('.countdown-trigger-btn');
+    if (countdownBtn) {
+      countdownBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const durationInput = row.querySelector('.stepper-input[data-field="' + countdownBtn.dataset.field + '"]');
+        openCountdown({ targetSeconds: parseFloat(durationInput.value), label: exerciseName });
+      });
+    }
 
     row.querySelectorAll('.number-picker-trigger').forEach((btn) => {
       btn.addEventListener('click', () => {
