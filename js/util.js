@@ -64,11 +64,31 @@ export function setAppChromeHidden(hidden) {
 }
 
 // Egzersiz durumunu (good/bad/null) her yerde aynı görünen tek bir rozete çeviriyor:
-// yeşil ✓ (good), kırmızı ▼ (bad), turuncu − (henüz işaretlenmedi).
-export function statusBadge(status) {
-  if (status === 'good') return '<span class="status-badge status-badge-good">✓</span>';
-  if (status === 'bad') return '<span class="status-badge status-badge-bad">▼</span>';
-  return '<span class="status-badge status-badge-neutral">−</span>';
+// yeşil ✓ (good), kırmızı ▼ (bad), turuncu − (henüz işaretlenmedi). `animate:true`
+// SADECE kullanıcı az önce bu durumu seçtiğinde (dayEntry.js) geçiliyor — rozet
+// büyüyüp çiziliyor + bir halka patlıyor; weekSummary/weekSummaryDesktop gibi salt
+// geçmiş veri gösteren yerler hep `animate:false` (varsayılan) kullanıyor.
+const STATUS_BADGE_PATHS = {
+  good: 'M5 13l4 4L19 7',
+  bad: 'M6 9l6 6 6-6',
+  neutral: 'M5 12h14',
+};
+
+export function statusBadge(status, animate = false) {
+  const key = status === 'good' ? 'good' : status === 'bad' ? 'bad' : 'neutral';
+  const cls = `status-badge status-badge-${key}${animate ? ' status-badge-pop' : ''}`;
+  const ring = animate ? '<span class="status-badge-ring"></span>' : '';
+  return `<span class="${cls}"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path class="status-badge-path" d="${STATUS_BADGE_PATHS[key]}"/></svg>${ring}</span>`;
+}
+
+// navigator.vibrate Android Chrome'da çalışıyor, iOS Safari'de hiç yok — sessizce
+// yok sayılıyor (hata fırlatmıyor), her tarayıcıda güvenle çağrılabilir.
+export function vibrate(pattern) {
+  try {
+    navigator.vibrate?.(pattern);
+  } catch {
+    // bazı tarayıcılar izin/gizlilik nedeniyle fırlatabilir, sessizce yok say
+  }
 }
 
 // Çizgili SVG ikonlar — emoji yerine (tema/işletim sistemine göre tutarsız
@@ -76,6 +96,7 @@ export function statusBadge(status) {
 // rengini otomatik alsınlar.
 export const ICON_TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h16M9 6V4h6v2M6 6l1 14h10l1-14"/></svg>';
 export const ICON_NOTE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 11.5a8.4 8.4 0 0 1-8.9 8.4 9 9 0 0 1-3.6-.7L3 20l1-4.7a8.3 8.3 0 0 1-.9-3.8A8.4 8.4 0 0 1 12 3a8.3 8.3 0 0 1 9 8.5Z"/></svg>';
+export const ICON_COACH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20c0-4 3-6.5 6.5-6.5s6.5 2.5 6.5 6.5"/></svg>';
 
 export function formatDuration(totalSeconds) {
   const s = Math.max(0, Math.round(totalSeconds));
@@ -84,6 +105,17 @@ export function formatDuration(totalSeconds) {
   const sec = s % 60;
   if (h > 0) return `${h}:${pad2(m)}:${pad2(sec)}`;
   return `${m}:${pad2(sec)}`;
+}
+
+const REST_TIMER_AUTO_RESET_KEY = 'gymbn_restTimerAutoReset';
+
+export function isRestTimerAutoResetEnabled() {
+  const v = localStorage.getItem(REST_TIMER_AUTO_RESET_KEY);
+  return v === null ? true : v === '1';
+}
+
+export function setRestTimerAutoResetEnabled(enabled) {
+  localStorage.setItem(REST_TIMER_AUTO_RESET_KEY, enabled ? '1' : '0');
 }
 
 export function escapeHtml(str) {

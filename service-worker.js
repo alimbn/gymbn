@@ -1,8 +1,11 @@
-const CACHE_NAME = 'gymbn-v30';
+const CACHE_NAME = 'gymbn-v35';
 
 const PRECACHE_URLS = [
   './',
   './index.html',
+  './admin.html',
+  './coach.html',
+  './join.html',
   './style.css',
   './manifest.json',
   './js/app.js',
@@ -12,6 +15,17 @@ const PRECACHE_URLS = [
   './js/auth.js',
   './js/cloudSync.js',
   './js/bulkParse.js',
+  './js/adminApp.js',
+  './js/coachApp.js',
+  './js/joinApp.js',
+  './js/shared/firebaseClient.js',
+  './js/shared/loginForm.js',
+  './js/roster/rosterUi.js',
+  './js/admin/adminCloud.js',
+  './js/admin/coachRoster.js',
+  './js/coach/coachCloud.js',
+  './js/coach/studentRoster.js',
+  './js/coach/assignProgram.js',
   './js/views/dashboard.js',
   './js/views/week.js',
   './js/views/weekSummary.js',

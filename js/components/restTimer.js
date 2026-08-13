@@ -1,5 +1,8 @@
+import { isRestTimerAutoResetEnabled, vibrate } from '../util.js';
+
 const DRAG_THRESHOLD = 8;
 const LONG_PRESS_MS = 600;
+const IDLE_RESET_MS = 60000;
 
 // Set arası dinlenmeyi takip eden, tüm ekranlar boyunca kaybolmayan (document.body'ye
 // doğrudan eklenen, #view-root'un dışında olduğu için router yeniden render ettiğinde
@@ -17,6 +20,7 @@ export function initRestTimer() {
   let seconds = 0;
   let running = false;
   let intervalId = null;
+  let idleResetTimer = null;
 
   let pointerDown = false;
   let dragMoved = false;
@@ -37,18 +41,33 @@ export function initRestTimer() {
     running = !running;
     btn.classList.toggle('running', running);
     if (running) {
+      clearTimeout(idleResetTimer);
       intervalId = setInterval(() => {
         seconds++;
         render();
       }, 1000);
     } else {
       clearInterval(intervalId);
+      scheduleIdleReset();
     }
+  }
+
+  // Duraklatılmış (çalışmayan) kronometre 1dk boyunca dokunulmadan kalırsa
+  // kendini sıfırlıyor — amaç, bir seti bitirip dinlenmeyi durdurduktan sonra
+  // bir sonraki sete girerken hâlâ eski süreyi gösterip elle sıfırlatmaması.
+  // Uzun-basış sıfırlaması bu özelliğe rağmen aynen çalışmaya devam ediyor.
+  function scheduleIdleReset() {
+    clearTimeout(idleResetTimer);
+    if (seconds === 0 || !isRestTimerAutoResetEnabled()) return;
+    idleResetTimer = setTimeout(() => {
+      if (!running) reset();
+    }, IDLE_RESET_MS);
   }
 
   function reset() {
     running = false;
     clearInterval(intervalId);
+    clearTimeout(idleResetTimer);
     seconds = 0;
     btn.classList.remove('running');
     render();
@@ -72,6 +91,7 @@ export function initRestTimer() {
     longPressTimer = setTimeout(() => {
       if (!dragMoved) {
         longPressFired = true;
+        vibrate(15);
         reset();
       }
     }, LONG_PRESS_MS);

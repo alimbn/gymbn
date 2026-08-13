@@ -3,7 +3,7 @@ import {
   dayTypes, exercises, addExerciseInstance, removeExerciseInstance, updateInstancePrescribed,
   updateInstanceNote, updateInstanceStatus, getLastInstance,
 } from '../storage.js';
-import { dayOfWeekLabel, formatDateShortTr, escapeHtml, statusBadge, formatDuration, ICON_TRASH, ICON_NOTE } from '../util.js';
+import { dayOfWeekLabel, formatDateShortTr, escapeHtml, statusBadge, formatDuration, vibrate, ICON_TRASH, ICON_NOTE, ICON_COACH } from '../util.js';
 import { renderSetRows } from '../components/setRows.js';
 import { openPicker } from '../components/picker.js';
 
@@ -60,7 +60,10 @@ function renderEntry(container, entry) {
       <button type="button" class="btn btn-block" id="add-exercise-btn">+ Egzersiz Ekle</button>
     </div>
 
-    <button type="button" class="btn btn-block day-complete-btn" id="complete-day-btn"></button>
+    <div class="day-complete-wrap">
+      <button type="button" class="btn btn-block day-complete-btn" id="complete-day-btn"></button>
+      <span class="confetti-wrap" id="complete-confetti"></span>
+    </div>
   `;
 
   const dateInput = container.querySelector('#date-input');
@@ -101,6 +104,7 @@ function renderEntry(container, entry) {
     }
     workoutTimerContent.innerHTML = `<button type="button" class="btn btn-primary btn-block" id="start-workout-btn">▶ Antrenmana Başla</button>`;
     workoutTimerContent.querySelector('#start-workout-btn').addEventListener('click', () => {
+      vibrate(15);
       entry.workoutStartedAt = Date.now();
       updateDayEntryField(entry.id, 'workoutStartedAt', entry.workoutStartedAt, false);
       renderWorkoutTimer();
@@ -146,6 +150,33 @@ function renderEntry(container, entry) {
     completeBtn.classList.toggle('active', !!entry.completed);
   }
   updateCompleteBtn();
+
+  // "Günü Tamamla"ya basınca (sadece tamamlanma yönünde, geri alırken değil) kısa
+  // bir titreşim + zıplama + birkaç renkli noktanın merkezden dağılması — bu ekranın
+  // en büyük anı olduğu için madde 1/2'deki küçük onay animasyonundan biraz daha vurgulu.
+  function playCompleteCelebration() {
+    vibrate([15, 50, 15]);
+    completeBtn.classList.remove('just-completed');
+    void completeBtn.offsetWidth; // reflow: art arda tamamla/geri al/tamamla'da animasyon her seferinde yeniden oynasın
+    completeBtn.classList.add('just-completed');
+
+    const confettiWrap = container.querySelector('#complete-confetti');
+    confettiWrap.innerHTML = '';
+    const colors = ['var(--success)', 'var(--primary)', 'var(--warning)'];
+    const count = 8;
+    for (let i = 0; i < count; i++) {
+      const dot = document.createElement('span');
+      dot.className = 'confetti-dot';
+      const angle = (Math.PI * 2 * i) / count;
+      const dist = 50 + Math.random() * 20;
+      dot.style.setProperty('--dx', `${Math.cos(angle) * dist}px`);
+      dot.style.setProperty('--dy', `${Math.sin(angle) * dist}px`);
+      dot.style.background = colors[i % colors.length];
+      confettiWrap.appendChild(dot);
+      requestAnimationFrame(() => dot.classList.add('playing'));
+    }
+  }
+
   completeBtn.addEventListener('click', () => {
     entry.completed = !entry.completed;
     if (entry.completed && entry.workoutStartedAt && !entry.workoutDurationSec) {
@@ -155,12 +186,17 @@ function renderEntry(container, entry) {
     }
     updateDayEntryField(entry.id, 'completed', entry.completed, false);
     updateCompleteBtn();
+    if (entry.completed) playCompleteCelebration();
   });
 
   // Accordion: only one exercise card expanded at a time, so mid-workout you can
   // focus on the one you're actually doing. Starts fully collapsed; adding a new
   // exercise focuses that one. Not persisted — purely a per-visit UI aid.
   let expandedInstId = null;
+  // "Nasıl gitti?" ile az önce durumu değişen instance — SADECE bir sonraki
+  // renderCards() çağrısında rozetin büyüyüp-çizilme animasyonunu tetiklemek için,
+  // tek seferlik (renderCards her çalıştığında sıfırlanıyor).
+  let justSetStatusInstId = null;
 
   function toggleExpand(instId) {
     expandedInstId = expandedInstId === instId ? null : instId;
@@ -175,13 +211,17 @@ function renderEntry(container, entry) {
     cardsRoot.innerHTML = '';
     entry.exercises.forEach((inst, idx) => {
       const isExpanded = inst.id === expandedInstId;
-      cardsRoot.appendChild(buildExerciseCard(entry, inst, isExpanded, () => toggleExpand(inst.id), renderCards, () => advanceTo(idx)));
+      const animateBadge = inst.id === justSetStatusInstId;
+      cardsRoot.appendChild(buildExerciseCard(entry, inst, isExpanded, () => toggleExpand(inst.id), renderCards, () => advanceTo(idx), animateBadge));
     });
+    justSetStatusInstId = null;
   }
 
   // "Nasıl gitti?" işaretlendiğinde bu kartı kapatıp bir sonraki egzersizi açar —
   // antrenman sırasında elle kapat/aç yapmadan sırayla ilerlemek için.
   function advanceTo(currentIdx) {
+    const current = entry.exercises[currentIdx];
+    justSetStatusInstId = current ? current.id : null;
     const next = entry.exercises[currentIdx + 1];
     expandedInstId = next ? next.id : null;
     renderCards();
@@ -214,9 +254,9 @@ function renderEntry(container, entry) {
   renderCards();
 }
 
-function buildExerciseCard(entry, inst, isExpanded, onToggle, refreshCards, onStatusSet) {
+function buildExerciseCard(entry, inst, isExpanded, onToggle, refreshCards, onStatusSet, animateBadge) {
   const card = document.createElement('div');
-  card.className = 'exercise-card' + (isExpanded ? ' expanded' : ' collapsed');
+  card.className = 'exercise-card' + (isExpanded ? ' expanded' : ' collapsed') + (inst.status ? ' marked' : '');
   const exercise = exercises.byId(inst.exerciseId);
 
   card.innerHTML = `
@@ -224,7 +264,7 @@ function buildExerciseCard(entry, inst, isExpanded, onToggle, refreshCards, onSt
       <span class="accordion-chevron">${isExpanded ? '▾' : '▸'}</span>
       <span class="exercise-name">${escapeHtml(exercise ? exercise.name : '(silinmiş egzersiz)')}</span>
       ${(inst.note || inst.prescribed.coachNote) ? `<span class="note-indicator" aria-label="Not var">${ICON_NOTE}</span>` : ''}
-      <span class="exercise-status-icon">${statusBadge(inst.status)}</span>
+      <span class="exercise-status-icon">${statusBadge(inst.status, animateBadge)}</span>
       <button type="button" class="btn-icon danger remove-exercise-btn" aria-label="Egzersizi sil">${ICON_TRASH}</button>
     </div>
     <div class="exercise-card-body"></div>
@@ -258,7 +298,7 @@ function buildExpandedBody(bodyEl, entry, inst, onStatusSet) {
   bodyEl.innerHTML = `
     <div class="last-time">${last ? `Son sefer (${formatDateShortTr(last.date)}): ${formatSetsSummary(last.actualSets, isDuration)}` : 'İlk kez yapılıyor.'}</div>
     <div class="prescribed-block">
-      <div class="block-label">Hoca</div>
+      <div class="block-label">${ICON_COACH}Hoca</div>
       <div class="prescribed-fields">
         <div class="field"><label>Ağırlık</label><input type="text" class="presc-input" data-field="weight" value="${escapeHtml(inst.prescribed.weight)}"></div>
         <div class="field"><label>Set</label><input type="number" class="presc-input" data-field="setCount" min="1" inputmode="numeric" value="${inst.prescribed.setCount ?? ''}"></div>
@@ -300,7 +340,10 @@ function buildExpandedBody(bodyEl, entry, inst, onStatusSet) {
     goodBtn.classList.toggle('active', next === 'good');
     badBtn.classList.toggle('active', next === 'bad');
     neutralBtn.classList.toggle('active', next === 'neutral');
-    if (next !== null) onStatusSet();
+    if (next !== null) {
+      vibrate(15);
+      onStatusSet();
+    }
   }
   goodBtn.addEventListener('click', () => setStatus('good'));
   badBtn.addEventListener('click', () => setStatus('bad'));

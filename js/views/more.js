@@ -1,4 +1,5 @@
 import { exportBackup, importBackup } from '../storage.js';
+import { isRestTimerAutoResetEnabled, setRestTimerAutoResetEnabled } from '../util.js';
 
 export function render(container) {
   container.innerHTML = `
@@ -11,6 +12,17 @@ export function render(container) {
       <a class="more-menu-item" href="#/payments"><span>Ödemeler</span><span class="chevron">›</span></a>
     </div>
 
+    <div class="section-title">Ayarlar</div>
+    <div class="card">
+      <div class="setting-row">
+        <div class="setting-row-text">
+          <span class="setting-row-title">Dinlenme kronometresini otomatik sıfırla</span>
+          <span class="setting-row-sub">Durdurulup 1 dakika dokunulmazsa sıfırlanır</span>
+        </div>
+        <button type="button" class="settings-toggle" id="auto-reset-toggle" role="switch" aria-label="Dinlenme kronometresini otomatik sıfırla"></button>
+      </div>
+    </div>
+
     <div class="section-title">Yedekleme</div>
     <div class="card">
       <p class="muted" style="margin-bottom: var(--space-3);">
@@ -21,6 +33,18 @@ export function render(container) {
       <input type="file" id="import-file" accept="application/json" style="display:none;">
     </div>
   `;
+
+  const autoResetToggle = container.querySelector('#auto-reset-toggle');
+  function syncAutoResetToggle() {
+    const on = isRestTimerAutoResetEnabled();
+    autoResetToggle.classList.toggle('on', on);
+    autoResetToggle.setAttribute('aria-checked', String(on));
+  }
+  syncAutoResetToggle();
+  autoResetToggle.addEventListener('click', () => {
+    setRestTimerAutoResetEnabled(!isRestTimerAutoResetEnabled());
+    syncAutoResetToggle();
+  });
 
   container.querySelector('#export-btn').addEventListener('click', () => {
     exportBackup();
