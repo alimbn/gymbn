@@ -7,20 +7,19 @@ const DURATION_STEP = 5;
 const NUMBER_FIELD_MAX = { reps: 30, rir: 9 };
 const NUMBER_FIELD_LABEL = { reps: 'Tekrar', rir: 'Rir' };
 
-// Set satırları egzersiz kartlarındaki akordiyonun bir seviye içerisi: aynı anda
-// sadece ÇALIŞILAN set açık (amber sol ray + kendi zemini), diğerleri (bitmiş ya
-// da henüz sırası gelmemiş fark etmez) tek satırlık özete iniyor. "Bu seti
-// bitirdim" sinyali RIR alanına dokunmak — gerçek antrenmanda da rir genelde bir
-// setin en son kontrol edilen değeri olduğu için doğal bir "artık ilerle" anı.
+// Tüm setler her zaman açık/düzenlenebilir kalıyor (kullanıcı canlı testte
+// akordiyon/gizleme hâlini UX düşüşü olarak değerlendirdi) — sadece hangi setle
+// uğraştığını amber sol ray + kendi zemini işaretliyor. Bir sete dokunmak
+// (herhangi bir alanına) o seti aktif işaretliyor; RIR alanına dokunmak AYRICA
+// bir sonraki bitmemiş sete ilerletiyor (rir genelde bir setin en son kontrol
+// edilen değeri, doğal bir "artık ilerle" sinyali).
 export function renderSetRows(container, { dayId, instId, inst, isDuration, exerciseName }) {
   let activeIndex = firstIncompleteIndex();
   renderAll();
 
-  // -1 = hiçbiri aktif değil (hepsi tamamsa hepsi kapalı/özet başlar, bir
-  // egzersiz kartını tekrar açıp gözden geçirirken tümünü derli toplu görmek
-  // için — istenilen satıra dokunup yine düzenlenebiliyor).
   function firstIncompleteIndex() {
-    return inst.actualSets.findIndex((s) => !s.touched);
+    const idx = inst.actualSets.findIndex((s) => !s.touched);
+    return idx === -1 ? null : idx;
   }
 
   function renderAll() {
@@ -40,22 +39,20 @@ export function renderSetRows(container, { dayId, instId, inst, isDuration, exer
     });
   }
 
+  // Tam yeniden render etmeden sadece "active" sınıfını taşımak — bir input'a
+  // yazarken satır aktifleşip renderAll tetiklerse odak/imleç kaybolurdu.
   function activate(idx) {
+    if (activeIndex === idx) return;
     activeIndex = idx;
-    renderAll();
+    container.querySelectorAll('.set-row').forEach((r) => {
+      r.classList.toggle('active', Number(r.dataset.setIndex) === idx);
+    });
   }
 
   function buildRow(set, idx) {
     const row = document.createElement('div');
-    const isActive = idx === activeIndex;
-    row.className = 'set-row' + (set.touched ? '' : ' suggested') + (isActive ? ' active' : ' collapsed');
+    row.className = 'set-row' + (set.touched ? '' : ' suggested') + (idx === activeIndex ? ' active' : '');
     row.dataset.setIndex = String(idx);
-
-    if (!isActive) {
-      row.innerHTML = buildSummary(set, idx, isDuration);
-      row.addEventListener('click', () => activate(idx));
-      return row;
-    }
 
     const bottomFields = isDuration
       ? buildLabeledStepper('reps', set.reps, { step: DURATION_STEP, unit: 'sn', label: 'Süre', withTimer: true })
@@ -72,31 +69,9 @@ export function renderSetRows(container, { dayId, instId, inst, isDuration, exer
       ${buildWeightStepper(set.weight)}
       ${bottomFields}
     `;
+    row.addEventListener('click', () => activate(idx));
     wireRow(row);
     return row;
-  }
-
-  function buildSummary(set, idx, isDurationRow) {
-    return `
-      <div class="set-row-summary">
-        <span class="set-row-summary-set">Set ${idx + 1}</span>
-        <span class="set-row-summary-val">${escapeHtml(formatRowSummary(set, isDurationRow))}</span>
-        ${set.touched ? '<span class="set-row-summary-check">✓</span>' : ''}
-      </div>
-    `;
-  }
-
-  function formatRowSummary(set, isDurationRow) {
-    const parts = [];
-    if (set.weight) parts.push(`${set.weight}kg`);
-    if (isDurationRow) {
-      parts.push(`${set.reps || '-'}sn`);
-      if (set.rir) parts.push(`rezerv ${set.rir}sn`);
-    } else {
-      parts.push(`× ${set.reps || '-'}`);
-      if (set.rir) parts.push(`rir ${set.rir}`);
-    }
-    return parts.join(' ');
   }
 
   function buildWeightStepper(value) {
@@ -167,25 +142,22 @@ export function renderSetRows(container, { dayId, instId, inst, isDuration, exer
     if (selectedEl) selectedEl.scrollIntoView({ block: 'center' });
   }
 
-  // Bir sete "bitti, ilerle" demenin sinyali: rir (ya da süre-tipinde rezerv)
-  // alanına dokunmak — gerçek antrenumda da rir genelde bir setin son kontrol
-  // edilen değeri. Ağırlık/tekrar'a dokunmak SADECE değeri günceller, hiç
-  // ilerletmiyor — kullanıcı hâlâ o setle uğraşıyor olabilir, erken kapatmıyoruz.
   function advanceAfterRir(idx) {
     const next = inst.actualSets.findIndex((s, i) => i > idx && !s.touched);
-    activate(next); // bulunamazsa -1: son setse egzersiz kartı akordiyonundaki gibi sadece kapanır
+    activate(next === -1 ? null : next);
   }
 
   function wireRow(row) {
     const setIndex = Number(row.dataset.setIndex);
 
-    row.querySelector('.set-row-remove').addEventListener('click', (e) => {
-      e.stopPropagation();
+    row.querySelector('.set-row-remove').addEventListener('click', () => {
       removeActualSet(dayId, instId, setIndex);
       activeIndex = firstIncompleteIndex();
       renderAll();
     });
 
+    // Ağırlık her zaman, süre/rezerv sadece isDuration'da bir stepper — hepsi aynı
+    // jenerik döngüyle kabloanıyor, adım büyüklüğü data-step'ten okunuyor.
     row.querySelectorAll('.stepper').forEach((stepperEl) => {
       const field = stepperEl.dataset.field;
       const step = parseFloat(stepperEl.dataset.step);
@@ -220,8 +192,7 @@ export function renderSetRows(container, { dayId, instId, inst, isDuration, exer
     }
 
     row.querySelectorAll('.number-picker-trigger').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
+      btn.addEventListener('click', () => {
         const field = btn.dataset.field;
         const current = parseInt(btn.textContent, 10);
         openNumberPicker({

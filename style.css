@@ -798,47 +798,8 @@ a.list-item {
   border-bottom: none;
 }
 
-/* Aynı anda sadece çalışılan set açık — egzersiz kartlarındaki akordiyonun bir
-   seviye içerisi. Kapalı satırlar düz/çizgili kalıyor (pasif = çizgi), aktif
-   olan kendi zeminine + amber sol raya oturuyor (aktif = kutu). */
-.set-row.collapsed {
-  padding: var(--space-2) 0;
-  cursor: pointer;
-}
-
-.set-row-summary {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.set-row-summary-set {
-  flex-shrink: 0;
-  width: 40px;
-  color: var(--text-muted);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.set-row-summary-val {
-  flex: 1;
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  font-size: 13.5px;
-  color: var(--text);
-}
-
-.set-row.suggested .set-row-summary-val {
-  color: var(--text-suggested);
-  font-style: italic;
-}
-
-.set-row-summary-check {
-  flex-shrink: 0;
-  color: var(--success);
-  font-size: 13px;
-}
-
+/* Tüm setler her zaman açık kalıyor — sadece çalışılan set (amber sol ray +
+   kendi zemini) işaretleniyor, hiçbir satır gizlenmiyor/küçülmüyor. */
 .set-row.active {
   border-bottom: none;
   background: var(--surface-2);
