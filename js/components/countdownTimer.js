@@ -1,6 +1,6 @@
 import { escapeHtml } from '../util.js';
 
-const PRE_DELAY_SECONDS = 3;
+const PRE_DELAY_SECONDS = 5;
 const INTENSE_THRESHOLD = 10;
 
 let activeBackdrop = null;

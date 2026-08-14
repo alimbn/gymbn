@@ -1,4 +1,4 @@
-import { addActualSet, removeActualSet, updateActualSetField } from '../storage.js';
+import { addActualSet, removeActualSet, updateActualSetField, extractLeadingInt } from '../storage.js';
 import { escapeHtml } from '../util.js';
 import { openCountdown } from './countdownTimer.js';
 
@@ -107,16 +107,29 @@ export function renderSetRows(container, { dayId, instId, inst, isDuration, exer
     `;
   }
 
-  function openNumberPicker({ title, max, current, onSelect }) {
+  // 0, ana ızgaradan ayrı kendi geniş butonunda duruyor (özellikle Rir'de sık
+  // seçilen bir değer — "failure'a kadar gittim" — gizli kalmasın diye), ızgara
+  // 1'den başlayınca satırlar doğal 5'li gruplara oturuyor (1-5, 6-10, 11-15...).
+  // `target` (hocanın prescribed değerinden çıkarılan hedef sayı) varsa VE
+  // seçili değerden farklıysa, kesikli çerçeveyle referans olarak işaretleniyor.
+  function openNumberPicker({ title, max, current, target, onSelect }) {
     const backdrop = document.createElement('div');
     backdrop.className = 'sheet-backdrop';
     let cells = '';
-    for (let i = 0; i <= max; i++) {
-      cells += `<button type="button" class="number-picker-cell${i === current ? ' selected' : ''}" data-value="${i}">${i}</button>`;
+    for (let i = 1; i <= max; i++) {
+      const classes = ['number-picker-cell'];
+      if (i === current) classes.push('selected');
+      if (i === target && i !== current) classes.push('target');
+      cells += `<button type="button" class="${classes.join(' ')}" data-value="${i}">${i}</button>`;
     }
+    const zeroClasses = ['zero-btn'];
+    if (current === 0) zeroClasses.push('selected');
+    if (target === 0 && current !== 0) zeroClasses.push('target');
     backdrop.innerHTML = `
       <div class="sheet">
         <div class="sheet-title">${escapeHtml(title)}</div>
+        <button type="button" class="${zeroClasses.join(' ')}" data-value="0">0</button>
+        <hr class="zero-divider">
         <div class="number-picker-grid">${cells}</div>
         <button type="button" class="btn btn-block sheet-close">Kapat</button>
       </div>
@@ -127,12 +140,14 @@ export function renderSetRows(container, { dayId, instId, inst, isDuration, exer
       backdrop.remove();
     }
 
-    backdrop.querySelector('.number-picker-grid').addEventListener('click', (e) => {
-      const cell = e.target.closest('.number-picker-cell');
+    function handlePick(e) {
+      const cell = e.target.closest('.number-picker-cell, .zero-btn');
       if (!cell) return;
       onSelect(Number(cell.dataset.value));
       close();
-    });
+    }
+    backdrop.querySelector('.number-picker-grid').addEventListener('click', handlePick);
+    backdrop.querySelector('.zero-btn').addEventListener('click', handlePick);
     backdrop.addEventListener('click', (e) => {
       if (e.target === backdrop) close();
     });
@@ -195,10 +210,12 @@ export function renderSetRows(container, { dayId, instId, inst, isDuration, exer
       btn.addEventListener('click', () => {
         const field = btn.dataset.field;
         const current = parseInt(btn.textContent, 10);
+        const target = extractLeadingInt(inst.prescribed[field], null);
         openNumberPicker({
           title: NUMBER_FIELD_LABEL[field],
           max: NUMBER_FIELD_MAX[field],
           current: isNaN(current) ? -1 : current,
+          target,
           onSelect: (value) => {
             btn.textContent = String(value);
             updateActualSetField(dayId, instId, setIndex, field, String(value), false);

@@ -196,7 +196,9 @@ function findInstance(dayId, instId) {
 // "Yapılan" set alanları artık sayısal seçiciler (reps 0-30, rir 0-9) — prescribed
 // serbest metin olabildiği için ("8-9", "75sn", "tükenene kadar") ilk sayıyı çıkarıp
 // makul bir başlangıç değerine indirgiyoruz; kullanıcı zaten seçiciden düzeltebilir.
-function extractLeadingInt(str, fallback) {
+// Export edilmiş: setRows.js aynı mantığı seçicide hocanın hedefini işaretlemek için
+// de kullanıyor (bkz. openNumberPicker'ın target parametresi).
+export function extractLeadingInt(str, fallback) {
   const match = String(str ?? '').match(/\d+/);
   return match ? parseInt(match[0], 10) : fallback;
 }
