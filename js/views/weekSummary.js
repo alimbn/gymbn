@@ -58,7 +58,8 @@ function buildExerciseSummary(inst) {
       <div class="summary-exercise-name">${escapeHtml(exercise ? exercise.name : '(silinmiş egzersiz)')} ${statusBadge(inst.status)}</div>
       <div class="summary-exercise-row"><span class="summary-label">Planlanan:</span> ${escapeHtml(formatPrescribed(inst.prescribed, isDuration))}</div>
       <div class="summary-exercise-row"><span class="summary-label">Yapılan:</span> ${escapeHtml(formatActual(inst.actualSets, isDuration))}</div>
-      ${inst.note ? `<div class="summary-exercise-note">"${escapeHtml(inst.note)}"</div>` : ''}
+      ${inst.prescribed.coachNote ? `<div class="summary-exercise-coachnote">Hoca: "${escapeHtml(inst.prescribed.coachNote)}"</div>` : ''}
+      ${inst.note ? `<div class="summary-exercise-note">Sporcu: "${escapeHtml(inst.note)}"</div>` : ''}
     </div>
   `;
 }

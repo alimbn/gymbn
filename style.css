@@ -1664,6 +1664,13 @@ a.list-item {
   color: var(--text-muted);
 }
 
+.summary-exercise-coachnote {
+  font-size: 13px;
+  color: var(--primary);
+  font-style: italic;
+  margin-top: 2px;
+}
+
 .summary-exercise-note {
   font-size: 13px;
   color: var(--text-muted);
@@ -1753,6 +1760,18 @@ body.chrome-hidden #view-root {
   color: var(--text-muted);
   font-style: italic;
   min-width: 140px;
+}
+
+.desktop-note-coach {
+  color: var(--primary);
+}
+
+.desktop-note-athlete {
+  color: var(--text-muted);
+}
+
+.desktop-note-coach + .desktop-note-athlete {
+  margin-top: 4px;
 }
 
 /* Dinlenme kronometresi (floating, sürüklenebilir) */

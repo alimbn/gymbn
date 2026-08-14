@@ -53,7 +53,10 @@ function buildDayTable(entry) {
         <td>${inst.actualSets.length || '-'}</td>
         <td>${escapeHtml(joinSetValues(inst.actualSets, 'reps', isDuration ? 'sn' : ''))}</td>
         <td>${escapeHtml(joinSetValues(inst.actualSets, 'rir', isDuration ? 'sn' : ''))}</td>
-        <td class="desktop-ex-note">${escapeHtml(inst.note)}</td>
+        <td class="desktop-ex-note">
+          ${inst.prescribed.coachNote ? `<div class="desktop-note-coach">H: ${escapeHtml(inst.prescribed.coachNote)}</div>` : ''}
+          ${inst.note ? `<div class="desktop-note-athlete">S: ${escapeHtml(inst.note)}</div>` : ''}
+        </td>
       </tr>
     `;
   }).join('');
