@@ -7,8 +7,21 @@ const DURATION_STEP = 5;
 const NUMBER_FIELD_MAX = { reps: 30, rir: 9 };
 const NUMBER_FIELD_LABEL = { reps: 'Tekrar', rir: 'Rir' };
 
+// Set satırları egzersiz kartlarındaki akordiyonun bir seviye içerisi: aynı anda
+// sadece ÇALIŞILAN set açık (amber sol ray + kendi zemini), diğerleri (bitmiş ya
+// da henüz sırası gelmemiş fark etmez) tek satırlık özete iniyor. "Bu seti
+// bitirdim" sinyali RIR alanına dokunmak — gerçek antrenmanda da rir genelde bir
+// setin en son kontrol edilen değeri olduğu için doğal bir "artık ilerle" anı.
 export function renderSetRows(container, { dayId, instId, inst, isDuration, exerciseName }) {
+  let activeIndex = firstIncompleteIndex();
   renderAll();
+
+  // -1 = hiçbiri aktif değil (hepsi tamamsa hepsi kapalı/özet başlar, bir
+  // egzersiz kartını tekrar açıp gözden geçirirken tümünü derli toplu görmek
+  // için — istenilen satıra dokunup yine düzenlenebiliyor).
+  function firstIncompleteIndex() {
+    return inst.actualSets.findIndex((s) => !s.touched);
+  }
 
   function renderAll() {
     container.innerHTML = `
@@ -22,14 +35,28 @@ export function renderSetRows(container, { dayId, instId, inst, isDuration, exer
     inst.actualSets.forEach((set, idx) => list.appendChild(buildRow(set, idx)));
     container.querySelector('.add-set-btn').addEventListener('click', () => {
       addActualSet(dayId, instId);
+      activeIndex = inst.actualSets.length - 1;
       renderAll();
     });
   }
 
+  function activate(idx) {
+    activeIndex = idx;
+    renderAll();
+  }
+
   function buildRow(set, idx) {
     const row = document.createElement('div');
-    row.className = 'set-row' + (set.touched ? '' : ' suggested');
+    const isActive = idx === activeIndex;
+    row.className = 'set-row' + (set.touched ? '' : ' suggested') + (isActive ? ' active' : ' collapsed');
     row.dataset.setIndex = String(idx);
+
+    if (!isActive) {
+      row.innerHTML = buildSummary(set, idx, isDuration);
+      row.addEventListener('click', () => activate(idx));
+      return row;
+    }
+
     const bottomFields = isDuration
       ? buildLabeledStepper('reps', set.reps, { step: DURATION_STEP, unit: 'sn', label: 'Süre', withTimer: true })
         + buildLabeledStepper('rir', set.rir, { step: DURATION_STEP, unit: 'sn', label: 'Rezerv' })
@@ -47,6 +74,29 @@ export function renderSetRows(container, { dayId, instId, inst, isDuration, exer
     `;
     wireRow(row);
     return row;
+  }
+
+  function buildSummary(set, idx, isDurationRow) {
+    return `
+      <div class="set-row-summary">
+        <span class="set-row-summary-set">Set ${idx + 1}</span>
+        <span class="set-row-summary-val">${escapeHtml(formatRowSummary(set, isDurationRow))}</span>
+        ${set.touched ? '<span class="set-row-summary-check">✓</span>' : ''}
+      </div>
+    `;
+  }
+
+  function formatRowSummary(set, isDurationRow) {
+    const parts = [];
+    if (set.weight) parts.push(`${set.weight}kg`);
+    if (isDurationRow) {
+      parts.push(`${set.reps || '-'}sn`);
+      if (set.rir) parts.push(`rezerv ${set.rir}sn`);
+    } else {
+      parts.push(`× ${set.reps || '-'}`);
+      if (set.rir) parts.push(`rir ${set.rir}`);
+    }
+    return parts.join(' ');
   }
 
   function buildWeightStepper(value) {
@@ -117,16 +167,25 @@ export function renderSetRows(container, { dayId, instId, inst, isDuration, exer
     if (selectedEl) selectedEl.scrollIntoView({ block: 'center' });
   }
 
+  // Bir sete "bitti, ilerle" demenin sinyali: rir (ya da süre-tipinde rezerv)
+  // alanına dokunmak — gerçek antrenumda da rir genelde bir setin son kontrol
+  // edilen değeri. Ağırlık/tekrar'a dokunmak SADECE değeri günceller, hiç
+  // ilerletmiyor — kullanıcı hâlâ o setle uğraşıyor olabilir, erken kapatmıyoruz.
+  function advanceAfterRir(idx) {
+    const next = inst.actualSets.findIndex((s, i) => i > idx && !s.touched);
+    activate(next); // bulunamazsa -1: son setse egzersiz kartı akordiyonundaki gibi sadece kapanır
+  }
+
   function wireRow(row) {
     const setIndex = Number(row.dataset.setIndex);
 
-    row.querySelector('.set-row-remove').addEventListener('click', () => {
+    row.querySelector('.set-row-remove').addEventListener('click', (e) => {
+      e.stopPropagation();
       removeActualSet(dayId, instId, setIndex);
+      activeIndex = firstIncompleteIndex();
       renderAll();
     });
 
-    // Ağırlık her zaman, süre/rezerv sadece isDuration'da bir stepper — hepsi aynı
-    // jenerik döngüyle kabloanıyor, adım büyüklüğü data-step'ten okunuyor.
     row.querySelectorAll('.stepper').forEach((stepperEl) => {
       const field = stepperEl.dataset.field;
       const step = parseFloat(stepperEl.dataset.step);
@@ -135,7 +194,7 @@ export function renderSetRows(container, { dayId, instId, inst, isDuration, exer
       input.addEventListener('input', () => {
         updateActualSetField(dayId, instId, setIndex, field, input.value, true);
         row.classList.remove('suggested');
-        syncLaterRows(setIndex);
+        if (field === 'rir') advanceAfterRir(setIndex);
       });
       stepperEl.querySelectorAll('.stepper-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
@@ -146,7 +205,7 @@ export function renderSetRows(container, { dayId, instId, inst, isDuration, exer
           input.value = String(next);
           updateActualSetField(dayId, instId, setIndex, field, input.value, false);
           row.classList.remove('suggested');
-          syncLaterRows(setIndex);
+          if (field === 'rir') advanceAfterRir(setIndex);
         });
       });
     });
@@ -161,7 +220,8 @@ export function renderSetRows(container, { dayId, instId, inst, isDuration, exer
     }
 
     row.querySelectorAll('.number-picker-trigger').forEach((btn) => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
         const field = btn.dataset.field;
         const current = parseInt(btn.textContent, 10);
         openNumberPicker({
@@ -172,24 +232,9 @@ export function renderSetRows(container, { dayId, instId, inst, isDuration, exer
             btn.textContent = String(value);
             updateActualSetField(dayId, instId, setIndex, field, String(value), false);
             row.classList.remove('suggested');
-            syncLaterRows(setIndex);
+            if (field === 'rir') advanceAfterRir(setIndex);
           },
         });
-      });
-    });
-  }
-
-  function syncLaterRows(fromIndex) {
-    const rowEls = container.querySelectorAll('.set-row');
-    inst.actualSets.forEach((set, idx) => {
-      if (idx <= fromIndex || set.touched) return;
-      const rowEl = rowEls[idx];
-      if (!rowEl) return;
-      rowEl.querySelectorAll('.set-field').forEach((el) => {
-        if (document.activeElement === el) return;
-        const val = set[el.dataset.field];
-        if (el.tagName === 'BUTTON') el.textContent = val;
-        else el.value = val;
       });
     });
   }
