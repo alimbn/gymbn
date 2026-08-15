@@ -1589,6 +1589,83 @@ a.list-item {
   padding: 8px 10px;
 }
 
+/* Ağırlık/Set/Tekrar/Rir'in üstünde kalıcı etiket — dayEntry.js'in "Hoca" bloğundaki
+   aynı fikir (değer girilince placeholder'ın kaybolup hangi alan olduğunu belirsiz
+   bırakması sorununu çözüyor), ama görsel olarak bu ekranın kendi kutulu input
+   stilini koruyor (prescribed-fields'ın altı-çizili minimal stili değil — onaylanan
+   demo buydu). */
+.bulk-exercise-row-fields .field {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 3px;
+  margin-bottom: 0;
+}
+
+.bulk-exercise-row-fields .field label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Set/Tekrar/Rir artık <input> değil <button> — global input[type=...] kutulu
+   stilini miras almıyor, o yüzden aynı görünümü burada elle tekrar ediyoruz. */
+.bulk-picker-trigger {
+  appearance: none;
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  text-align: center;
+}
+
+.bulk-picker-trigger.empty {
+  color: var(--text-suggested);
+}
+
+.range-readout {
+  text-align: center;
+  color: var(--primary);
+  font-size: 13px;
+  margin-bottom: var(--space-3);
+  min-height: 16px;
+}
+
+.number-picker-cell.range-mid {
+  background: color-mix(in srgb, var(--primary) 30%, var(--surface-2));
+  border-color: var(--primary);
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-3);
+}
+
+.checkbox-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+}
+
+.checkbox-row label {
+  font-size: 14px;
+  color: var(--text);
+}
+
+.grid-disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
 /* Roster (admin/hoca) + davet linki */
 
 .invite-link-card {
