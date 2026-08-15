@@ -1,4 +1,5 @@
 import { escapeHtml, ICON_TRASH } from '../util.js';
+import { confirmSheet } from '../components/confirmSheet.js';
 
 // libraryList.js'in .list/.list-item görsel dilini paylaşıyor ama roster'a özgü
 // üç farkı karşılıyor: veri asenkron (Firestore), satırlar tıklanabilir link
@@ -87,7 +88,7 @@ export async function renderRosterScreen(container, config) {
       const cancelBtn = row.querySelector('.invite-cancel-btn');
       if (cancelBtn) {
         cancelBtn.addEventListener('click', async () => {
-          if (!confirm(`"${invites[i].displayName}" daveti iptal edilsin mi?`)) return;
+          if (!(await confirmSheet(`"${invites[i].displayName}" daveti iptal edilsin mi?`, { confirmLabel: 'İptal Et' }))) return;
           cancelBtn.disabled = true;
           try {
             await onCancelInvite(invites[i].id);

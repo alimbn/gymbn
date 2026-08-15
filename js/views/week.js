@@ -1,5 +1,6 @@
 import { getDayEntryByDate, createDayEntry, suggestNextDayNumber, deleteDayEntry, dayTypes, getPaymentCycleStatus } from '../storage.js';
 import { addDaysIso, todayIso, dayOfWeekLabel, formatDateShortTr, escapeHtml } from '../util.js';
+import { confirmSheet } from '../components/confirmSheet.js';
 
 export function render(container, { mondayIso }) {
   const today = todayIso();
@@ -19,7 +20,7 @@ export function render(container, { mondayIso }) {
       <a href="#/week/${prevMonday}" class="btn-icon" aria-label="Önceki hafta">‹</a>
       <div>
         <div class="week-range">${formatDateShortTr(mondayIso)} – ${formatDateShortTr(days[6])}</div>
-        ${cycle.hasPayment ? `<div class="week-cycle-note">Ödeme döngüsü: ${cycle.overdue ? 'gecikti' : cycle.weekInCycle + '. hafta'}</div>` : ''}
+        ${cycle.hasPayment ? `<div class="week-cycle-note">${cycle.overdue ? 'Ödeme gecikti' : cycle.countdown ? `Ödemeye ${cycle.daysUntilDue === 0 ? 'bugün' : cycle.daysUntilDue + ' gün'}` : 'Ödeme güncel'}</div>` : ''}
       </div>
       <a href="#/week/${nextMonday}" class="btn-icon" aria-label="Sonraki hafta">›</a>
     </div>
@@ -46,9 +47,9 @@ export function render(container, { mondayIso }) {
 
   const clearBtn = container.querySelector('#clear-week-btn');
   if (clearBtn) {
-    clearBtn.addEventListener('click', () => {
+    clearBtn.addEventListener('click', async () => {
       const totalExercises = existingEntries.reduce((sum, e) => sum + e.exercises.length, 0);
-      if (confirm(`Bu haftadaki ${existingEntries.length} gün (toplam ${totalExercises} egzersiz) tamamen silinecek. Bu işlem geri alınamaz. Emin misin?`)) {
+      if (await confirmSheet(`Bu haftadaki ${existingEntries.length} gün (toplam ${totalExercises} egzersiz) tamamen silinecek. Bu işlem geri alınamaz.`)) {
         existingEntries.forEach((e) => deleteDayEntry(e.id));
         render(container, { mondayIso });
       }

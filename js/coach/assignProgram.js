@@ -1,6 +1,7 @@
 import { normalizeForMatch, addDaysIso, mondayOfWeek, todayIso, escapeHtml } from '../util.js';
 import { parseWeeklyProgramText } from '../bulkParse.js';
 import { getStudent, getStudentAppState, setStudentAppState } from './coachCloud.js';
+import { confirmSheet } from '../components/confirmSheet.js';
 
 // bulkAdd.js'in AYNI yapıştır→ayrıştır→düzenlenebilir önizleme→onayla akışı,
 // ama js/storage.js'in yerel singleton'ı yerine BAŞKA bir kullanıcının uzaktan
@@ -345,7 +346,7 @@ function renderReviewScreen(container, student, state, monday, blocks) {
   const confirmBtn = container.querySelector('#confirm-btn');
   confirmBtn.addEventListener('click', async () => {
     const skipped = blocks.filter((b) => !b.assignedDate).length;
-    if (skipped && !confirm(`${skipped} gün tarihe atanmadığı için eklenmeyecek. Devam edilsin mi?`)) {
+    if (skipped && !(await confirmSheet(`${skipped} gün tarihe atanmadığı için eklenmeyecek. Devam edilsin mi?`, { confirmLabel: 'Devam Et', danger: false }))) {
       return;
     }
     confirmBtn.disabled = true;

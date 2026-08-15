@@ -1,6 +1,7 @@
 import { getStudent, getStudentAppState, setStudentAppState } from './coachCloud.js';
 import { cycleStatus, sortedPayments } from './paymentCycle.js';
 import { escapeHtml, formatDateLongTr, todayIso, ICON_TRASH } from '../util.js';
+import { confirmSheet } from '../components/confirmSheet.js';
 
 function uid() {
   return `pay_${Date.now().toString(36).slice(-4)}${Math.random().toString(36).slice(2, 8)}`;
@@ -140,7 +141,7 @@ function wireScreen(container, studentUid, state) {
       btn.addEventListener('click', async () => {
         const row = btn.closest('.list-item');
         const id = row.dataset.id;
-        if (!confirm('Bu ödeme kaydı silinsin mi?')) return;
+        if (!(await confirmSheet('Bu ödeme kaydı silinsin mi?'))) return;
         btn.disabled = true;
         const idx = state.payments.findIndex((p) => p.id === id);
         const [removed] = state.payments.splice(idx, 1);

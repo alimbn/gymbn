@@ -1,5 +1,6 @@
 import { exportBackup, importBackup } from '../storage.js';
 import { isRestTimerAutoResetEnabled, setRestTimerAutoResetEnabled } from '../util.js';
+import { confirmSheet } from '../components/confirmSheet.js';
 
 export function render(container) {
   container.innerHTML = `
@@ -50,10 +51,10 @@ export function render(container) {
     exportBackup();
   });
 
-  container.querySelector('#import-file').addEventListener('change', (e) => {
+  container.querySelector('#import-file').addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (!confirm('Mevcut tüm veriler yedekteki verilerle değiştirilecek. Emin misin?')) {
+    if (!(await confirmSheet('Mevcut tüm veriler yedekteki verilerle değiştirilecek.', { confirmLabel: 'Değiştir' }))) {
       e.target.value = '';
       return;
     }

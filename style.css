@@ -2161,6 +2161,19 @@ body.chrome-hidden .rest-timer-btn {
   margin-bottom: var(--space-4);
 }
 
+.confirm-sheet-message {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0 0 var(--space-4);
+}
+
+.confirm-sheet-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
 .sheet-field {
   display: flex;
   gap: var(--space-2);
