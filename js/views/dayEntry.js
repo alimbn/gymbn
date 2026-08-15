@@ -6,6 +6,7 @@ import {
 import { dayOfWeekLabel, formatDateShortTr, escapeHtml, statusBadge, formatDuration, vibrate, ICON_TRASH, ICON_NOTE, ICON_COACH } from '../util.js';
 import { renderSetRows } from '../components/setRows.js';
 import { openPicker } from '../components/picker.js';
+import { confirmSheet } from '../components/confirmSheet.js';
 
 export function render(container, { id }) {
   const entry = getDayEntryById(id);
@@ -116,10 +117,10 @@ function renderEntry(container, entry) {
     history.back();
   });
 
-  container.querySelector('#delete-day-btn').addEventListener('click', () => {
+  container.querySelector('#delete-day-btn').addEventListener('click', async () => {
     const dt = entry.dayTypeId ? dayTypes.byId(entry.dayTypeId) : null;
     const label = [formatDateShortTr(entry.date), dt ? dt.name : null].filter(Boolean).join(' · ');
-    if (confirm(`"${label}" antrenman günü tamamen silinecek (${entry.exercises.length} egzersiz dahil). Bu işlem geri alınamaz. Emin misin?`)) {
+    if (await confirmSheet(`"${label}" antrenman günü tamamen silinecek (${entry.exercises.length} egzersiz dahil). Bu işlem geri alınamaz.`)) {
       deleteDayEntry(entry.id);
       history.back();
     }
@@ -272,10 +273,10 @@ function buildExerciseCard(entry, inst, isExpanded, onToggle, refreshCards, onSt
 
   card.querySelector('.exercise-card-header').addEventListener('click', () => onToggle());
 
-  card.querySelector('.remove-exercise-btn').addEventListener('click', (e) => {
+  card.querySelector('.remove-exercise-btn').addEventListener('click', async (e) => {
     e.stopPropagation();
     const name = exercise ? exercise.name : 'Bu egzersiz';
-    if (confirm(`"${name}" bugünün antrenmanından silinsin mi?`)) {
+    if (await confirmSheet(`"${name}" bugünün antrenmanından silinsin mi?`)) {
       removeExerciseInstance(entry.id, inst.id);
       refreshCards();
     }

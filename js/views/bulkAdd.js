@@ -6,6 +6,7 @@ import {
   normalizeForMatch, addDaysIso, mondayOfWeek, todayIso, escapeHtml,
 } from '../util.js';
 import { parseWeeklyProgramText } from '../bulkParse.js';
+import { confirmSheet } from '../components/confirmSheet.js';
 
 export function render(container, params) {
   const monday = (params && params.mondayIso) || mondayOfWeek(todayIso());
@@ -98,9 +99,9 @@ function renderReviewScreen(container, monday, blocks) {
     blocksRoot.appendChild(buildBlockCard(block));
   });
 
-  container.querySelector('#confirm-btn').addEventListener('click', () => {
+  container.querySelector('#confirm-btn').addEventListener('click', async () => {
     const skipped = blocks.filter((b) => !b.assignedDate).length;
-    if (skipped && !confirm(`${skipped} gün tarihe atanmadığı için eklenmeyecek. Devam edilsin mi?`)) {
+    if (skipped && !(await confirmSheet(`${skipped} gün tarihe atanmadığı için eklenmeyecek. Devam edilsin mi?`, { confirmLabel: 'Devam Et', danger: false }))) {
       return;
     }
     commitBlocks(blocks);

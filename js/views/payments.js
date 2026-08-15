@@ -1,5 +1,6 @@
 import { getPayments, addPayment, deletePayment, getPaymentCycleStatus } from '../storage.js';
 import { formatDateLongTr, todayIso, ICON_TRASH } from '../util.js';
+import { confirmSheet } from '../components/confirmSheet.js';
 
 export function render(container) {
   container.innerHTML = `
@@ -94,10 +95,10 @@ export function render(container) {
     renderList();
   });
 
-  listEl.addEventListener('click', (e) => {
+  listEl.addEventListener('click', async (e) => {
     const row = e.target.closest('.list-item');
     if (!row || !e.target.classList.contains('delete-btn')) return;
-    if (confirm('Bu ödeme kaydı silinsin mi?')) {
+    if (await confirmSheet('Bu ödeme kaydı silinsin mi?')) {
       deletePayment(row.dataset.id);
       renderSummary();
       renderList();

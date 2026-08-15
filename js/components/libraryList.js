@@ -1,4 +1,5 @@
 import { escapeHtml, ICON_TRASH } from '../util.js';
+import { confirmSheet } from './confirmSheet.js';
 
 export function renderLibraryList(container, { title, store, placeholder, backHref, showDurationToggle }) {
   container.innerHTML = `
@@ -73,14 +74,14 @@ export function renderLibraryList(container, { title, store, placeholder, backHr
     addInput.focus();
   });
 
-  listRoot.addEventListener('click', (e) => {
+  listRoot.addEventListener('click', async (e) => {
     const row = e.target.closest('.list-item');
     if (!row) return;
     if (e.target.classList.contains('edit-btn')) {
       enterEdit(row);
     } else if (e.target.classList.contains('delete-btn')) {
       const name = row.querySelector('.view-mode').textContent;
-      if (confirm(`"${name}" silinsin mi?`)) {
+      if (await confirmSheet(`"${name}" silinsin mi?`)) {
         store.archive(row.dataset.id);
         renderItems();
       }
