@@ -5,6 +5,7 @@ import * as studentRoster from './coach/studentRoster.js';
 import * as studentDetail from './coach/studentDetail.js';
 import * as assignProgram from './coach/assignProgram.js';
 import * as studentMeasurements from './coach/studentMeasurements.js';
+import * as studentPayments from './coach/studentPayments.js';
 
 const viewRoot = document.getElementById('view-root');
 
@@ -66,6 +67,7 @@ function initCoachApp() {
   addRoute(/^#\/student\/([^/]+)$/, (root, match) => studentDetail.render(root, { studentUid: match[1] }));
   addRoute(/^#\/assign\/([^/]+)$/, (root, match) => assignProgram.render(root, { studentUid: match[1] }));
   addRoute(/^#\/measurements\/([^/]+)$/, (root, match) => studentMeasurements.render(root, { studentUid: match[1] }));
+  addRoute(/^#\/payments\/([^/]+)$/, (root, match) => studentPayments.render(root, { studentUid: match[1] }));
 
   function onRouteChange() {
     renderRoute(viewRoot);
