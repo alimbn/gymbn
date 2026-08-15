@@ -1,12 +1,34 @@
 import { renderRosterScreen } from '../roster/rosterUi.js';
 import {
   listMyStudents, listPendingStudentInvites, createStudentInvite, cancelStudentInvite, coachSignOut,
+  getStudentAppState,
 } from './coachCloud.js';
+import { cycleStatus } from './paymentCycle.js';
 
 function buildInviteLink(token) {
   const url = new URL('./join.html', location.href);
   url.hash = `/student/${token}`;
   return url.href;
+}
+
+// Ödeme rozeti için her öğrencinin uzak state'ini AYRICA okumak gerekiyor
+// (payments[] students/{uid} dokümanında değil, users/{uid}/data/main'de) —
+// paralel çekiliyor, bir öğrencinin okuması başarısız olursa sadece o satır
+// rozetsiz kalıyor, tüm roster'ı bozmuyor.
+function badgeForCycle(cycle) {
+  if (!cycle.hasPayment) return null;
+  if (cycle.overdue) return { text: 'Gecikti', className: 'badge-danger' };
+  return { text: `${cycle.weekInCycle}. hafta`, className: cycle.weekInCycle >= 4 ? 'badge-warning' : '' };
+}
+
+async function paymentBadgeFor(studentUid) {
+  try {
+    const state = await getStudentAppState(studentUid);
+    return badgeForCycle(cycleStatus((state && state.payments) || []));
+  } catch (err) {
+    console.error('Ödeme durumu okunamadı', studentUid, err);
+    return null;
+  }
 }
 
 export async function render(container) {
@@ -26,14 +48,15 @@ export async function render(container) {
     statLabel: 'Öğrenci',
     loadItems: async () => {
       const students = await listMyStudents();
-      return students
-        .sort((a, b) => a.displayName.localeCompare(b.displayName, 'tr'))
-        .map((s) => ({
-          id: s.id,
-          title: s.displayName,
-          subtitle: 'Yönetmek için dokun',
-          href: `#/student/${s.id}`,
-        }));
+      const sorted = students.sort((a, b) => a.displayName.localeCompare(b.displayName, 'tr'));
+      const badges = await Promise.all(sorted.map((s) => paymentBadgeFor(s.id)));
+      return sorted.map((s, i) => ({
+        id: s.id,
+        title: s.displayName,
+        subtitle: 'Yönetmek için dokun',
+        href: `#/student/${s.id}`,
+        badge: badges[i],
+      }));
     },
     loadPendingInvites: async () => {
       const invites = await listPendingStudentInvites();
@@ -41,5 +64,9 @@ export async function render(container) {
     },
     onAdd: async (name) => ({ link: buildInviteLink(await createStudentInvite(name)) }),
     onCancelInvite: (id) => cancelStudentInvite(id),
+    extraStats: (items) => {
+      const overdueCount = items.filter((i) => i.badge && i.badge.className === 'badge-danger').length;
+      return overdueCount > 0 ? [{ value: overdueCount, label: 'Gecikmiş', warn: true }] : [];
+    },
   });
 }

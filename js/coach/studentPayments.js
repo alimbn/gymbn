@@ -1,21 +1,6 @@
 import { getStudent, getStudentAppState, setStudentAppState } from './coachCloud.js';
-import { escapeHtml, formatDateLongTr, todayIso, isoToDate, ICON_TRASH } from '../util.js';
-
-// storage.js'in getPaymentCycleStatus()'ıyla AYNI mantığın izole kopyası (bkz.
-// assignProgram.js'in başındaki not — bu dosya da storage.js'i bilerek import
-// etmiyor). Veri modeli de birebir aynı: payments[] düz, tarihli kayıt listesi,
-// döngü/gecikme durumu son ödeme tarihinden türetiliyor, ayrı bir alan tutulmuyor.
-function sortedPayments(payments) {
-  return [...payments].sort((a, b) => b.date.localeCompare(a.date));
-}
-
-function cycleStatus(payments) {
-  const last = sortedPayments(payments)[0];
-  if (!last) return { hasPayment: false };
-  const daysSince = Math.floor((Date.now() - isoToDate(last.date).getTime()) / 86400000);
-  const weekInCycle = Math.min(4, Math.floor(Math.max(daysSince, 0) / 7) + 1);
-  return { hasPayment: true, lastDate: last.date, daysSince, weekInCycle, overdue: daysSince >= 28 };
-}
+import { cycleStatus, sortedPayments } from './paymentCycle.js';
+import { escapeHtml, formatDateLongTr, todayIso, ICON_TRASH } from '../util.js';
 
 function uid() {
   return `pay_${Date.now().toString(36).slice(-4)}${Math.random().toString(36).slice(2, 8)}`;
