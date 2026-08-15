@@ -1,0 +1,73 @@
+import { onCoachAuthReady, coachLogin, coachSignOut, coachResetPassword, isCurrentUserCoach } from './coach/coachCloud.js';
+import { renderLoginForm } from './shared/loginForm.js';
+import { addRoute, renderRoute } from './router.js';
+import * as studentRoster from './coach/studentRoster.js';
+import * as assignProgram from './coach/assignProgram.js';
+
+const viewRoot = document.getElementById('view-root');
+
+renderLoading();
+onCoachAuthReady(async (user) => {
+  if (!user) {
+    renderLogin();
+    return;
+  }
+  let ok = false;
+  try {
+    ok = await isCurrentUserCoach();
+  } catch (err) {
+    console.error('Hoca yetkisi kontrol edilemedi', err);
+  }
+  if (!ok) {
+    renderAccessDenied();
+    return;
+  }
+  initCoachApp();
+});
+
+function renderLoading() {
+  viewRoot.innerHTML = `
+    <div class="auth-screen">
+      <div class="auth-card">
+        <div class="auth-title">Gym Takip — Hoca</div>
+        <p class="auth-loading">Yükleniyor…</p>
+      </div>
+    </div>
+  `;
+}
+
+function renderLogin() {
+  renderLoginForm(viewRoot, {
+    title: 'Gym Takip — Hoca',
+    onSubmit: (email, password) => coachLogin(email, password),
+    onResetPassword: (email) => coachResetPassword(email),
+  });
+}
+
+function renderAccessDenied() {
+  viewRoot.innerHTML = `
+    <div class="auth-screen">
+      <div class="auth-card">
+        <div class="auth-title">Gym Takip — Hoca</div>
+        <p class="auth-error">Bu hesabın hoca yetkisi yok.</p>
+        <button type="button" class="btn btn-ghost btn-block" id="signout-btn">Çıkış Yap</button>
+      </div>
+    </div>
+  `;
+  viewRoot.querySelector('#signout-btn').addEventListener('click', () => coachSignOut());
+}
+
+function initCoachApp() {
+  document.body.classList.remove('auth-gate');
+
+  addRoute(/^#\/?$/, (root) => studentRoster.render(root));
+  addRoute(/^#\/assign\/([^/]+)$/, (root, match) => assignProgram.render(root, { studentUid: match[1] }));
+
+  function onRouteChange() {
+    renderRoute(viewRoot);
+    viewRoot.scrollTo(0, 0);
+  }
+
+  window.addEventListener('hashchange', onRouteChange);
+  onRouteChange();
+}

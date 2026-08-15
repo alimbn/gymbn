@@ -1,0 +1,96 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    function isCoach() {
+      return isSignedIn() && exists(/databases/$(database)/documents/coaches/$(request.auth.uid));
+    }
+    function isCoachOfStudent(studentUid) {
+      return isCoach()
+        && exists(/databases/$(database)/documents/students/$(studentUid))
+        && get(/databases/$(database)/documents/students/$(studentUid)).data.coachId == request.auth.uid;
+    }
+
+    // ---- Mevcut kullanıcı verisi: DEĞİŞMEDİ, sadece bir OR ile genişledi ----
+    // request.auth.uid == userId satırı hiç dokunulmadan aynı kaldı; isCoachOfStudent
+    // SADECE bir hoca istek yaptığında çalışıyor, || kısa-devre yaptığı için mevcut
+    // hesabın (ve her öğrencinin kendi verisinin) davranışı/maliyeti birebir aynı.
+    match /users/{userId}/{document=**} {
+      allow read, write: if isSignedIn() && (
+        request.auth.uid == userId ||
+        isCoachOfStudent(userId)
+      );
+    }
+
+    // ---- admins: yalnızca Console/Admin SDK yazabilir (ikisi de rule'ları bypass eder) ----
+    match /admins/{uid} {
+      allow get: if isSignedIn() && request.auth.uid == uid;
+      allow list, create, update, delete: if false;
+    }
+
+    // ---- coaches: doc ID = hocanın gerçek uid'i. Sadece geçerli, pending bir
+    // coachInvites token'ı sunularak (join.html'in runTransaction'ı içinde) oluşturulabilir. ----
+    match /coaches/{coachUid} {
+      allow get: if isSignedIn() && request.auth.uid == coachUid;
+      allow list: if isAdmin();
+      allow create: if isSignedIn()
+        && request.auth.uid == coachUid
+        && request.resource.data.inviteToken is string
+        && get(/databases/$(database)/documents/coachInvites/$(request.resource.data.inviteToken)).data.status == 'pending';
+      allow update, delete: if false;
+    }
+
+    // ---- coachInvites: admin oluşturur, token bilen HERKES (auth'suz) 'get' edebilir
+    // (join.html davet edenin adını göstermek için okuyor), claim tek yönlü geçiş. ----
+    match /coachInvites/{token} {
+      allow get: if true;
+      allow list: if isAdmin();
+      allow create: if isAdmin() && request.resource.data.status == 'pending';
+      allow update: if isSignedIn()
+        && resource.data.status == 'pending'
+        && request.resource.data.status == 'claimed'
+        && request.resource.data.claimedUid == request.auth.uid
+        && request.resource.data.displayName == resource.data.displayName
+        && request.resource.data.createdBy == resource.data.createdBy;
+      allow delete: if isAdmin();
+    }
+
+    // ---- students: doc ID = öğrencinin gerçek uid'i. coachId create anında
+    // studentInvites'daki değerle eşleşmek ZORUNDA (yoksa geçerli bir davetle
+    // "yanlış" hocaya bağlanma açığı olurdu). ----
+    match /students/{studentUid} {
+      allow get: if isSignedIn() && (request.auth.uid == studentUid || isCoachOfStudent(studentUid) || isAdmin());
+      // list/count: her hoca SADECE kendi coachId'siyle filtrelenmiş sorguyu görebilir
+      // (Firestore, resource.data üzerinden bu filtreyi fiilen zorunlu kılar); admin
+      // hoca roster'ındaki öğrenci sayılarını görmek için hepsini sayabilir.
+      allow list: if (isCoach() && resource.data.coachId == request.auth.uid) || isAdmin();
+      allow create: if isSignedIn()
+        && request.auth.uid == studentUid
+        && request.resource.data.inviteToken is string
+        && request.resource.data.coachId is string
+        && get(/databases/$(database)/documents/studentInvites/$(request.resource.data.inviteToken)).data.status == 'pending'
+        && get(/databases/$(database)/documents/studentInvites/$(request.resource.data.inviteToken)).data.coachId == request.resource.data.coachId;
+      allow update, delete: if false;
+    }
+
+    // ---- studentInvites: sadece daveti oluşturan hoca yönetir; token bilen herkes 'get' edebilir. ----
+    match /studentInvites/{token} {
+      allow get: if true;
+      allow list: if isCoach() && resource.data.coachId == request.auth.uid;
+      allow create: if isCoach() && request.resource.data.coachId == request.auth.uid && request.resource.data.status == 'pending';
+      allow update: if isSignedIn()
+        && resource.data.status == 'pending'
+        && request.resource.data.status == 'claimed'
+        && request.resource.data.claimedUid == request.auth.uid
+        && request.resource.data.coachId == resource.data.coachId
+        && request.resource.data.displayName == resource.data.displayName;
+      allow delete: if isCoach() && resource.data.coachId == request.auth.uid;
+    }
+  }
+}
