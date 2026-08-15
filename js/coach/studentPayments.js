@@ -100,7 +100,7 @@ function renderScreen(container, studentUid, student, state) {
       <div class="form-row">
         <div class="field">
           <label>Tarih</label>
-          <input type="date" id="payment-date" value="${todayIso()}">
+          <input type="date" id="payment-date" value="${todayIso()}" max="${todayIso()}">
         </div>
         <div class="field">
           <label>Tutar (opsiyonel)</label>
