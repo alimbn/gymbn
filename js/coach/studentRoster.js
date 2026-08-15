@@ -23,6 +23,7 @@ export async function render(container) {
     addPlaceholder: 'Öğrenci adı',
     addButtonLabel: 'Öğrenci Davet Et',
     emptyText: 'Henüz öğrenci eklenmedi.',
+    statLabel: 'Öğrenci',
     loadItems: async () => {
       const students = await listMyStudents();
       return students

@@ -13,14 +13,16 @@ export async function renderRosterScreen(container, config) {
   const {
     addPlaceholder, addButtonLabel = 'Davet Oluştur',
     loadItems, loadPendingInvites, onAdd, onCancelInvite,
-    emptyText = 'Henüz eklenmedi.',
+    emptyText = 'Henüz eklenmedi.', statLabel,
   } = config;
 
   container.innerHTML = `
+    <div class="stat-strip" id="roster-stat-strip"></div>
     <form class="add-form" id="roster-add-form">
       <input type="text" id="roster-add-input" placeholder="${escapeHtml(addPlaceholder)}" autocomplete="off">
       <button type="submit" class="btn btn-primary">${escapeHtml(addButtonLabel)}</button>
     </form>
+    <div class="search-hint" id="roster-search-hint"></div>
     <div id="roster-invite-panel"></div>
     <div id="roster-pending-root"></div>
     <div class="list" id="roster-list-root"><p class="empty-state">Yükleniyor…</p></div>
@@ -31,6 +33,8 @@ export async function renderRosterScreen(container, config) {
   const invitePanel = container.querySelector('#roster-invite-panel');
   const pendingRoot = container.querySelector('#roster-pending-root');
   const listRoot = container.querySelector('#roster-list-root');
+  const statStrip = container.querySelector('#roster-stat-strip');
+  const searchHint = container.querySelector('#roster-search-hint');
 
   function renderInvitePanel(link) {
     invitePanel.innerHTML = `
@@ -117,11 +121,64 @@ export async function renderRosterScreen(container, config) {
     }).join('');
   }
 
+  // İstatistik şeridi: bugün tek taş (sayım), ileride yanına başka taş eklenebilir
+  // diye ayrı bir şerit olarak tutuluyor, tek bir büyük stat-card değil.
+  function renderStatStrip(count) {
+    if (!statLabel) return;
+    statStrip.innerHTML = `
+      <div class="stat-tile">
+        <div class="stat-tile-value">${count}</div>
+        <div class="stat-tile-label">${escapeHtml(statLabel)}</div>
+      </div>
+    `;
+  }
+
+  // "Öğrenci/Hoca adı" kutusu iki iş görüyor: normal submit'te yeni davet oluşturur,
+  // yazarken de aşağıdaki listeyi (hem eklenmiş hem bekleyen) anlık filtreler — datatable
+  // arama mantığı. Sıfır eşleşmede "davet et" ipucu göstererek arama mı yeni ekleme mi
+  // yaptığı karışmasın diye.
+  function rowMatches(row, q) {
+    const title = row.querySelector('.list-item-title');
+    return !q || (title && title.textContent.toLocaleLowerCase('tr').includes(q));
+  }
+
+  function applyFilter() {
+    const q = addInput.value.trim().toLocaleLowerCase('tr');
+    let listVisible = 0;
+    listRoot.querySelectorAll('.list-item').forEach((row) => {
+      const match = rowMatches(row, q);
+      row.classList.toggle('hidden-by-filter', !match);
+      if (match) listVisible++;
+    });
+    let pendingVisible = 0;
+    pendingRoot.querySelectorAll('.list-item').forEach((row) => {
+      const match = rowMatches(row, q);
+      row.classList.toggle('hidden-by-filter', !match);
+      if (match) pendingVisible++;
+    });
+    const pendingSection = pendingRoot.querySelector('.roster-pending-section');
+    if (pendingSection) pendingSection.style.display = pendingVisible ? '' : 'none';
+
+    if (!q) {
+      searchHint.textContent = '';
+      searchHint.classList.remove('active');
+    } else if (listVisible + pendingVisible === 0) {
+      searchHint.textContent = `Bu isimde kimse yok — eklemek için "${addForm.querySelector('button').textContent}"e dokun.`;
+      searchHint.classList.add('active');
+    } else {
+      searchHint.textContent = `${listVisible + pendingVisible} eşleşme.`;
+      searchHint.classList.remove('active');
+    }
+  }
+  addInput.addEventListener('input', applyFilter);
+
   async function reload() {
     invitePanel.innerHTML = '';
     const [items, invites] = await Promise.all([loadItems(), loadPendingInvites()]);
     renderList(items);
     renderPending(invites);
+    renderStatStrip(items.length);
+    applyFilter();
   }
 
   addForm.addEventListener('submit', async (e) => {
