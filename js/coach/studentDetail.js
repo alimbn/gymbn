@@ -22,10 +22,16 @@ export async function render(container, { studentUid }) {
 
   renderShell(container, student.displayName, `
     <div class="list">
+      <a href="#/schedule/${studentUid}" class="list-item">
+        <div class="list-item-main">
+          <span class="list-item-title">Takvim</span>
+          <div class="list-item-sub">Atanan programı gör, geçmiş haftalara bak</div>
+        </div>
+      </a>
       <a href="#/assign/${studentUid}" class="list-item">
         <div class="list-item-main">
-          <span class="list-item-title">Program</span>
-          <div class="list-item-sub">Bu haftaki program, yeni program ata</div>
+          <span class="list-item-title">Program Ata</span>
+          <div class="list-item-sub">Yeni program yapıştır</div>
         </div>
       </a>
       <a href="#/measurements/${studentUid}" class="list-item">
