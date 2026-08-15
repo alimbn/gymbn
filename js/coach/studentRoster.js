@@ -31,8 +31,8 @@ export async function render(container) {
         .map((s) => ({
           id: s.id,
           title: s.displayName,
-          subtitle: 'Program atamak için dokun',
-          href: `#/assign/${s.id}`,
+          subtitle: 'Yönetmek için dokun',
+          href: `#/student/${s.id}`,
         }));
     },
     loadPendingInvites: async () => {

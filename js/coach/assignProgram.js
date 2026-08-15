@@ -18,7 +18,7 @@ function uid(prefix) {
 }
 
 function emptyState() {
-  return { schemaVersion: 1, updatedAt: 0, exercises: [], dayTypes: [], dayEntries: [], payments: [] };
+  return { schemaVersion: 1, updatedAt: 0, exercises: [], dayTypes: [], dayEntries: [], payments: [], measurements: [] };
 }
 
 function activeDayTypes(state) { return state.dayTypes.filter((d) => !d.archived); }
@@ -234,11 +234,11 @@ export async function render(container, { studentUid }) {
     [student, remoteState] = await Promise.all([getStudent(studentUid), getStudentAppState(studentUid)]);
   } catch (err) {
     console.error('Öğrenci verisi yüklenemedi', err);
-    renderErrorScreen(container, 'Öğrenci verisi yüklenemedi, internet bağlantını kontrol edip tekrar dene.');
+    renderErrorScreen(container, studentUid, 'Öğrenci verisi yüklenemedi, internet bağlantını kontrol edip tekrar dene.');
     return;
   }
   if (!student) {
-    renderErrorScreen(container, 'Öğrenci bulunamadı.');
+    renderErrorScreen(container, studentUid, 'Öğrenci bulunamadı.');
     return;
   }
 
@@ -251,10 +251,10 @@ function renderLoadingScreen(container) {
   container.innerHTML = '<p class="empty-state">Yükleniyor…</p>';
 }
 
-function renderErrorScreen(container, message) {
+function renderErrorScreen(container, studentUid, message) {
   container.innerHTML = `
     <div class="view-header">
-      <a href="#/" class="back-link" aria-label="Geri">←</a>
+      <a href="#/student/${studentUid}" class="back-link" aria-label="Geri">←</a>
       <h2 class="view-title">Program Ata</h2>
       <span></span>
     </div>
@@ -265,7 +265,7 @@ function renderErrorScreen(container, message) {
 function renderPasteScreen(container, student, state, monday) {
   container.innerHTML = `
     <div class="view-header">
-      <a href="#/" class="back-link" aria-label="Geri">←</a>
+      <a href="#/student/${student.id}" class="back-link" aria-label="Geri">←</a>
       <h2 class="view-title">Program Ata</h2>
       <span></span>
     </div>

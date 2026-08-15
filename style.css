@@ -2013,3 +2013,176 @@ body.auth-gate .rest-timer-btn,
 body.chrome-hidden .rest-timer-btn {
   display: none;
 }
+
+/* Hoca — öğrenci ölçümleri (yansıyan diyagram) */
+
+.timeline-note {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.timeline-note b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.gender-toggle {
+  display: flex;
+  margin-bottom: var(--space-3);
+  width: fit-content;
+}
+
+.gender-btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-suggested);
+  margin-left: -1px;
+  padding: 6px 16px;
+  font-size: 12px;
+  font-family: inherit;
+}
+
+.gender-btn:first-of-type {
+  border-top-left-radius: var(--radius-sm);
+  border-bottom-left-radius: var(--radius-sm);
+  margin-left: 0;
+}
+
+.gender-btn:last-of-type {
+  border-top-right-radius: var(--radius-sm);
+  border-bottom-right-radius: var(--radius-sm);
+}
+
+.gender-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-text);
+  font-weight: 700;
+}
+
+.diagram-row {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+
+.body-diagram-wrap {
+  flex-shrink: 0;
+  width: 118px;
+}
+
+.body-diagram-wrap svg {
+  display: none;
+}
+
+.body-diagram-wrap svg.shown {
+  display: block;
+}
+
+.body-part {
+  fill: var(--surface-2);
+  stroke: var(--border-strong);
+  stroke-width: 1;
+  transition: fill 0.3s ease, stroke 0.3s ease;
+}
+
+.body-part.lit {
+  fill: rgba(201, 161, 90, 0.28);
+  stroke: var(--primary);
+  stroke-width: 1.5;
+}
+
+.measure-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.measure-row {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px 6px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+}
+
+.measure-row.focused {
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+
+.measure-row svg {
+  width: 15px;
+  height: 15px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.measure-row.focused svg {
+  color: var(--primary);
+}
+
+.measure-row-label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  min-width: 0;
+}
+
+.measure-row.focused .measure-row-label {
+  color: var(--text);
+}
+
+.measure-row-dates {
+  font-size: 10px;
+  color: var(--text-suggested);
+  margin-top: 1px;
+}
+
+.measure-row-val {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.sheet-sub {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-bottom: var(--space-4);
+}
+
+.sheet-field {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.sheet-field input {
+  flex: 1;
+}
+
+.sheet-field input[type="date"] {
+  flex: 0 0 150px;
+}
