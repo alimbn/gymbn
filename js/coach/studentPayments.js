@@ -53,21 +53,29 @@ function buildCycleCard(payments) {
       </div>
     `;
   }
-  const dots = [1, 2, 3, 4].map((n) => {
-    let cls = 'dot';
-    if (cycle.overdue) cls += ' overdue';
-    else if (n <= cycle.weekInCycle) cls += ' filled';
-    return `<div class="${cls}"></div>`;
-  }).join('');
+  if (cycle.overdue) {
+    return `
+      <div class="stat-card">
+        <div class="stat-label">Ödeme Günü</div>
+        <div class="stat-value">Ödeme zamanı geldi <span class="badge badge-danger">Gecikti</span></div>
+        <div class="stat-detail">Ödeme günü: ${formatDateLongTr(cycle.dueDate)} (${cycle.daysSinceDue} gün geçti)</div>
+      </div>
+    `;
+  }
+  if (cycle.countdown) {
+    return `
+      <div class="stat-card">
+        <div class="stat-label">Ödeme Günü</div>
+        <div class="stat-value">${cycle.daysUntilDue === 0 ? 'Bugün' : `${cycle.daysUntilDue} gün kaldı`}</div>
+        <div class="stat-detail">Sıradaki ödeme: ${formatDateLongTr(cycle.dueDate)}</div>
+      </div>
+    `;
+  }
   return `
     <div class="stat-card">
-      <div class="stat-label">Ödeme Döngüsü</div>
-      <div class="stat-value">
-        ${cycle.overdue ? 'Ödeme zamanı geldi' : `${cycle.weekInCycle}. hafta / 4`}
-        ${cycle.overdue ? '<span class="badge badge-danger">Gecikti</span>' : ''}
-      </div>
-      <div class="stat-detail">Son ödeme: ${formatDateLongTr(cycle.lastDate)} (${cycle.daysSince} gün önce)</div>
-      <div class="cycle-dots">${dots}</div>
+      <div class="stat-label">Ödeme Günü</div>
+      <div class="stat-value">${formatDateLongTr(cycle.dueDate)}</div>
+      <div class="stat-detail">Sabit ödeme günü: ${cycle.anchorDay}</div>
     </div>
   `;
 }
