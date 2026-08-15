@@ -364,8 +364,11 @@ export function deletePayment(id) {
 export function getPaymentCycleStatus() {
   const last = getPayments()[0];
   if (!last) return { hasPayment: false };
-  const daysSince = Math.floor((Date.now() - isoToDate(last.date).getTime()) / 86400000);
-  const weekInCycle = Math.min(4, Math.floor(Math.max(daysSince, 0) / 7) + 1);
+  // İleri tarihli bir ödeme kaydı (yanlışlıkla girilmiş olabilir) negatif "gün
+  // önce" göstermesin diye 0'a sabitleniyor — tarih input'una da max=bugün
+  // eklendi (bkz. payments.js/studentPayments.js), bu ikinci bir güvenlik katmanı.
+  const daysSince = Math.max(0, Math.floor((Date.now() - isoToDate(last.date).getTime()) / 86400000));
+  const weekInCycle = Math.min(4, Math.floor(daysSince / 7) + 1);
   return {
     hasPayment: true,
     lastDate: last.date,

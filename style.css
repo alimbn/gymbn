@@ -282,6 +282,17 @@ button {
   color: var(--danger);
 }
 
+/* ICON_TRASH (util.js) tek SVG içerikli .btn-icon — diğerleri hep düz karakter
+   (×, ⧉, ✎, ‹, ›), font-size'dan boyutlanıyor. SVG'nin kendi width/height'ı yok,
+   viewBox tek başına flex içinde boyut vermiyor — 0×0 render oluyordu (roster
+   davet iptali, gün/egzersiz silme, iki ödeme ekranı, kütüphane silme — hepsi
+   aynı bug'ı taşıyordu, tek satırla hepsi düzeliyor). */
+.btn-icon svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
 .duration-toggle-btn {
   opacity: 0.4;
 }

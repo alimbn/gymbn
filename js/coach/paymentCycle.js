@@ -13,7 +13,9 @@ export function sortedPayments(payments) {
 export function cycleStatus(payments) {
   const last = sortedPayments(payments)[0];
   if (!last) return { hasPayment: false };
-  const daysSince = Math.floor((Date.now() - isoToDate(last.date).getTime()) / 86400000);
-  const weekInCycle = Math.min(4, Math.floor(Math.max(daysSince, 0) / 7) + 1);
+  // storage.js'in getPaymentCycleStatus()'ıyla AYNI 0'a sabitleme — iki kopya
+  // olduğu için bu mantığa dokunulursa İKİSİ de güncellenmeli (bkz. yorumu orada).
+  const daysSince = Math.max(0, Math.floor((Date.now() - isoToDate(last.date).getTime()) / 86400000));
+  const weekInCycle = Math.min(4, Math.floor(daysSince / 7) + 1);
   return { hasPayment: true, lastDate: last.date, daysSince, weekInCycle, overdue: daysSince >= 28 };
 }
