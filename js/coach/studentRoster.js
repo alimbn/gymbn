@@ -4,6 +4,7 @@ import {
   getStudentAppState,
 } from './coachCloud.js';
 import { cycleStatus } from './paymentCycle.js';
+import { formatDateShortTr } from '../util.js';
 
 function buildInviteLink(token) {
   const url = new URL('./join.html', location.href);
@@ -15,10 +16,15 @@ function buildInviteLink(token) {
 // (payments[] students/{uid} dokümanında değil, users/{uid}/data/main'de) —
 // paralel çekiliyor, bir öğrencinin okuması başarısız olursa sadece o satır
 // rozetsiz kalıyor, tüm roster'ı bozmuyor.
+// Kısa, rozet-boyutlu metin için gün-adı sonekinden (19'u/19'unda gibi, sayıya
+// göre değişen ünlü uyumu) bilerek kaçınılıyor — tarih doğrudan gösteriliyor.
 function badgeForCycle(cycle) {
   if (!cycle.hasPayment) return null;
   if (cycle.overdue) return { text: 'Gecikti', className: 'badge-danger' };
-  return { text: `${cycle.weekInCycle}. hafta`, className: cycle.weekInCycle >= 4 ? 'badge-warning' : '' };
+  if (cycle.countdown) {
+    return { text: cycle.daysUntilDue === 0 ? 'Bugün' : `${cycle.daysUntilDue} gün`, className: 'badge-warning' };
+  }
+  return { text: formatDateShortTr(cycle.dueDate), className: '' };
 }
 
 async function paymentBadgeFor(studentUid) {

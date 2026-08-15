@@ -35,11 +35,31 @@ export function render(container) {
       summaryEl.innerHTML = '';
       return;
     }
+    if (cycle.overdue) {
+      summaryEl.innerHTML = `
+        <div class="stat-card">
+          <div class="stat-label">Ödeme Günü</div>
+          <div class="stat-value">Ödeme zamanı geldi <span class="badge badge-danger">Gecikti</span></div>
+          <div class="stat-detail">Ödeme günü: ${formatDateLongTr(cycle.dueDate)} (${cycle.daysSinceDue} gün geçti)</div>
+        </div>
+      `;
+      return;
+    }
+    if (cycle.countdown) {
+      summaryEl.innerHTML = `
+        <div class="stat-card">
+          <div class="stat-label">Ödeme Günü</div>
+          <div class="stat-value">${cycle.daysUntilDue === 0 ? 'Bugün' : `${cycle.daysUntilDue} gün kaldı`}</div>
+          <div class="stat-detail">Sıradaki ödeme: ${formatDateLongTr(cycle.dueDate)}</div>
+        </div>
+      `;
+      return;
+    }
     summaryEl.innerHTML = `
       <div class="stat-card">
-        <div class="stat-label">Güncel Döngü</div>
-        <div class="stat-value">${cycle.overdue ? 'Ödeme zamanı geldi' : `${cycle.weekInCycle}. hafta / 4`}</div>
-        <div class="stat-detail">Son ödeme: ${formatDateLongTr(cycle.lastDate)} (${cycle.daysSince} gün önce)</div>
+        <div class="stat-label">Ödeme Günü</div>
+        <div class="stat-value">${formatDateLongTr(cycle.dueDate)}</div>
+        <div class="stat-detail">Sabit ödeme günü: ${cycle.anchorDay}</div>
       </div>
     `;
   }

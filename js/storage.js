@@ -1,4 +1,4 @@
-import { isoToDate } from './util.js';
+import { isoToDate, todayIso, pad2 } from './util.js';
 import { scheduleCloudPush } from './cloudSync.js';
 
 const STORAGE_KEY = 'gymbnData';
@@ -361,20 +361,69 @@ export function deletePayment(id) {
   saveState(false);
 }
 
+const PAYMENT_COUNTDOWN_DAYS = 10;
+
+function clampDayToMonth(year, month, day) {
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  return Math.min(day, lastDay);
+}
+
+function anchorDateFor(anchorDay, year, month) {
+  return new Date(year, month, clampDayToMonth(year, month, anchorDay));
+}
+
+// `date`'ten SONRAKİ ilk milad günü — `date`'in kendisi milad günüyse bir
+// sonraki aya geçiyor ("az önce ödedin, sıradaki ödeme gelecek ay" demek).
+function nextOccurrenceAfter(anchorDay, date) {
+  let year = date.getFullYear();
+  let month = date.getMonth();
+  let candidate = anchorDateFor(anchorDay, year, month);
+  if (candidate.getTime() <= date.getTime()) {
+    month += 1;
+    if (month > 11) { month = 0; year += 1; }
+    candidate = anchorDateFor(anchorDay, year, month);
+  }
+  return candidate;
+}
+
+function paymentDaysBetween(a, b) {
+  return Math.round((b.getTime() - a.getTime()) / 86400000);
+}
+
+// Kayan 4 haftalık döngü yerine sabit ayın günü: en ESKİ ödemenin günü kalıcı
+// milad oluyor (ayrı bir ayar yok — "hangi gün ödemeye başladıysa o milad").
+// Sıradaki ödeme, EN SON ödemeden sonraki ilk milad günü — geç ödense bile bir
+// sonraki miladı ERTELEMİYOR, sadece o anki gecikmeyi kapatıyor. js/coach/
+// paymentCycle.js'te İZOLE bir kopyası var (coach sayfaları bu dosyayı import
+// edemiyor) — biri değişirse ikisi de değişmeli.
 export function getPaymentCycleStatus() {
-  const last = getPayments()[0];
-  if (!last) return { hasPayment: false };
-  // İleri tarihli bir ödeme kaydı (yanlışlıkla girilmiş olabilir) negatif "gün
-  // önce" göstermesin diye 0'a sabitleniyor — tarih input'una da max=bugün
-  // eklendi (bkz. payments.js/studentPayments.js), bu ikinci bir güvenlik katmanı.
-  const daysSince = Math.max(0, Math.floor((Date.now() - isoToDate(last.date).getTime()) / 86400000));
-  const weekInCycle = Math.min(4, Math.floor(daysSince / 7) + 1);
+  const sorted = getPayments();
+  if (!sorted.length) return { hasPayment: false };
+
+  const anchorDay = isoToDate(sorted[sorted.length - 1].date).getDate();
+  const today = isoToDate(todayIso());
+  const latestPaymentDate = isoToDate(sorted[0].date);
+  const dueDate = nextOccurrenceAfter(anchorDay, latestPaymentDate);
+  const overdue = today.getTime() > dueDate.getTime();
+  const dueDateIso = `${dueDate.getFullYear()}-${pad2(dueDate.getMonth() + 1)}-${pad2(dueDate.getDate())}`;
+
+  if (overdue) {
+    return {
+      hasPayment: true,
+      anchorDay,
+      overdue: true,
+      dueDate: dueDateIso,
+      daysSinceDue: paymentDaysBetween(dueDate, today),
+    };
+  }
+  const daysUntilDue = paymentDaysBetween(today, dueDate);
   return {
     hasPayment: true,
-    lastDate: last.date,
-    daysSince,
-    weekInCycle,
-    overdue: daysSince >= 28,
+    anchorDay,
+    overdue: false,
+    dueDate: dueDateIso,
+    daysUntilDue,
+    countdown: daysUntilDue <= PAYMENT_COUNTDOWN_DAYS,
   };
 }
 
