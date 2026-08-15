@@ -1,4 +1,4 @@
-import { addActualSet, removeActualSet, updateActualSetField, extractLeadingInt } from '../storage.js';
+import { addActualSet, removeActualSet, updateActualSetField } from '../storage.js';
 import { escapeHtml } from '../util.js';
 import { openCountdown } from './countdownTimer.js';
 
@@ -6,6 +6,16 @@ const WEIGHT_STEP = 2.5;
 const DURATION_STEP = 5;
 const NUMBER_FIELD_MAX = { reps: 30, rir: 9 };
 const NUMBER_FIELD_LABEL = { reps: 'Tekrar', rir: 'Rir' };
+
+// Hocanın prescribed metninden 1-2 hedef sayı çıkarır — "3-4" gibi bir aralıksa
+// İKİSİNİ de döner (extractLeadingInt sadece ilkini alırdı, "4" sessizce kaybolurdu).
+function extractIntRange(str) {
+  const match = String(str ?? '').match(/(\d+)(?:-(\d+))?/);
+  if (!match) return [];
+  const low = parseInt(match[1], 10);
+  const high = match[2] ? parseInt(match[2], 10) : low;
+  return low === high ? [low] : [low, high];
+}
 
 // Tüm setler her zaman açık/düzenlenebilir kalıyor (kullanıcı canlı testte
 // akordiyon/gizleme hâlini UX düşüşü olarak değerlendirdi) — sadece hangi setle
@@ -110,21 +120,21 @@ export function renderSetRows(container, { dayId, instId, inst, isDuration, exer
   // 0, ana ızgaradan ayrı kendi geniş butonunda duruyor (özellikle Rir'de sık
   // seçilen bir değer — "failure'a kadar gittim" — gizli kalmasın diye), ızgara
   // 1'den başlayınca satırlar doğal 5'li gruplara oturuyor (1-5, 6-10, 11-15...).
-  // `target` (hocanın prescribed değerinden çıkarılan hedef sayı) varsa VE
-  // seçili değerden farklıysa, kesikli çerçeveyle referans olarak işaretleniyor.
-  function openNumberPicker({ title, max, current, target, onSelect }) {
+  // `targets` (hocanın prescribed değerinden çıkarılan 1-2 hedef sayı — "3-4" gibi
+  // bir aralıksa İKİSİ de) seçili değerden farklıysa, kesikli çerçeveyle işaretleniyor.
+  function openNumberPicker({ title, max, current, targets, onSelect }) {
     const backdrop = document.createElement('div');
     backdrop.className = 'sheet-backdrop';
     let cells = '';
     for (let i = 1; i <= max; i++) {
       const classes = ['number-picker-cell'];
       if (i === current) classes.push('selected');
-      if (i === target && i !== current) classes.push('target');
+      if (targets.includes(i) && i !== current) classes.push('target');
       cells += `<button type="button" class="${classes.join(' ')}" data-value="${i}">${i}</button>`;
     }
     const zeroClasses = ['zero-btn'];
     if (current === 0) zeroClasses.push('selected');
-    if (target === 0 && current !== 0) zeroClasses.push('target');
+    if (targets.includes(0) && current !== 0) zeroClasses.push('target');
     backdrop.innerHTML = `
       <div class="sheet">
         <div class="sheet-title">${escapeHtml(title)}</div>
@@ -210,12 +220,12 @@ export function renderSetRows(container, { dayId, instId, inst, isDuration, exer
       btn.addEventListener('click', () => {
         const field = btn.dataset.field;
         const current = parseInt(btn.textContent, 10);
-        const target = extractLeadingInt(inst.prescribed[field], null);
+        const targets = extractIntRange(inst.prescribed[field]);
         openNumberPicker({
           title: NUMBER_FIELD_LABEL[field],
           max: NUMBER_FIELD_MAX[field],
           current: isNaN(current) ? -1 : current,
-          target,
+          targets,
           onSelect: (value) => {
             btn.textContent = String(value);
             updateActualSetField(dayId, instId, setIndex, field, String(value), false);
