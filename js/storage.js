@@ -27,6 +27,7 @@ function defaultState() {
     ],
     dayEntries: [],
     payments: [],
+    measurements: [],
   };
 }
 
