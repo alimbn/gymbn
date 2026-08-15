@@ -13,7 +13,7 @@ export async function renderRosterScreen(container, config) {
   const {
     addPlaceholder, addButtonLabel = 'Davet Oluştur',
     loadItems, loadPendingInvites, onAdd, onCancelInvite,
-    emptyText = 'Henüz eklenmedi.', statLabel,
+    emptyText = 'Henüz eklenmedi.', statLabel, extraStats,
   } = config;
 
   container.innerHTML = `
@@ -116,21 +116,34 @@ export async function renderRosterScreen(container, config) {
             <span class="list-item-title">${escapeHtml(item.title)}</span>
             ${item.subtitle ? `<div class="list-item-sub">${escapeHtml(item.subtitle)}</div>` : ''}
           </div>
+          ${item.badge ? `<span class="badge ${escapeHtml(item.badge.className || '')}">${escapeHtml(item.badge.text)}</span>` : ''}
         </${tag}>
       `;
     }).join('');
   }
 
-  // İstatistik şeridi: bugün tek taş (sayım), ileride yanına başka taş eklenebilir
-  // diye ayrı bir şerit olarak tutuluyor, tek bir büyük stat-card değil.
-  function renderStatStrip(count) {
+  // İstatistik şeridi: sayım taşı + (varsa) ekran-özel ek taşlar (ör. roster'da
+  // "N Gecikmiş" — admin'in hoca listesinde bu kavram yok, extraStats verilmezse
+  // hiç eklenmiyor, şerit tek taşta kalıyor).
+  function renderStatStrip(count, items) {
     if (!statLabel) return;
-    statStrip.innerHTML = `
+    const tiles = [`
       <div class="stat-tile">
         <div class="stat-tile-value">${count}</div>
         <div class="stat-tile-label">${escapeHtml(statLabel)}</div>
       </div>
-    `;
+    `];
+    if (extraStats) {
+      extraStats(items).forEach((s) => {
+        tiles.push(`
+          <div class="stat-tile${s.warn ? ' warn' : ''}">
+            <div class="stat-tile-value">${s.value}</div>
+            <div class="stat-tile-label">${escapeHtml(s.label)}</div>
+          </div>
+        `);
+      });
+    }
+    statStrip.innerHTML = tiles.join('');
   }
 
   // "Öğrenci/Hoca adı" kutusu iki iş görüyor: normal submit'te yeni davet oluşturur,
@@ -177,7 +190,7 @@ export async function renderRosterScreen(container, config) {
     const [items, invites] = await Promise.all([loadItems(), loadPendingInvites()]);
     renderList(items);
     renderPending(invites);
-    renderStatStrip(items.length);
+    renderStatStrip(items.length, items);
     applyFilter();
   }
 
