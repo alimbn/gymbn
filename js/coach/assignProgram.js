@@ -51,6 +51,154 @@ function extractLeadingInt(str, fallback) {
   return match ? parseInt(match[0], 10) : fallback;
 }
 function clampRir(n) { return Math.max(0, Math.min(9, n)); }
+
+const SET_COUNT_MAX = 20;
+const REPS_MAX = 30;
+const RIR_MAX = 9;
+const UNTIL_FAILURE_TEXT = 'tükenene kadar';
+
+function fieldDisplay(value) {
+  return value === '' || value == null ? '—' : String(value);
+}
+
+function parseRangeValue(str) {
+  const match = String(str ?? '').match(/^(\d+)(?:-(\d+))?$/);
+  if (!match) return { start: null, end: null };
+  return { start: parseInt(match[1], 10), end: match[2] ? parseInt(match[2], 10) : null };
+}
+
+function formatRangeValue(start, end) {
+  if (start == null) return '';
+  if (end == null || end === start) return String(start);
+  const lo = Math.min(start, end);
+  const hi = Math.max(start, end);
+  return `${lo}-${hi}`;
+}
+
+// Set için sade, tekil seçici — setRows.js'in openNumberPicker'ıyla aynı iskelet
+// (target kavramı hariç, burada karşılaştırılacak bir hedef yok, kendisi hedefi girer).
+function openSetPicker({ current, onSelect }) {
+  const backdrop = document.createElement('div');
+  backdrop.className = 'sheet-backdrop';
+  let cells = '';
+  for (let i = 1; i <= SET_COUNT_MAX; i++) {
+    cells += `<button type="button" class="number-picker-cell${i === current ? ' selected' : ''}" data-value="${i}">${i}</button>`;
+  }
+  backdrop.innerHTML = `
+    <div class="sheet">
+      <div class="sheet-title">Set</div>
+      <button type="button" class="zero-btn${current === 0 ? ' selected' : ''}" data-value="0">0</button>
+      <hr class="zero-divider">
+      <div class="number-picker-grid">${cells}</div>
+      <button type="button" class="btn btn-block sheet-close">Kapat</button>
+    </div>
+  `;
+  document.body.appendChild(backdrop);
+
+  function close() { backdrop.remove(); }
+  function handlePick(e) {
+    const cell = e.target.closest('.number-picker-cell, .zero-btn');
+    if (!cell) return;
+    onSelect(Number(cell.dataset.value));
+    close();
+  }
+  backdrop.querySelector('.number-picker-grid').addEventListener('click', handlePick);
+  backdrop.querySelector('.zero-btn').addEventListener('click', handlePick);
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+  backdrop.querySelector('.sheet-close').addEventListener('click', close);
+
+  const selectedEl = backdrop.querySelector('.number-picker-cell.selected');
+  if (selectedEl) selectedEl.scrollIntoView({ block: 'center' });
+}
+
+// Tekrar/Rir için aralık-veya-tekil seçici: bir sayıya dokun = tekil aday, ikinci
+// (farklı) sayıya dokun = aralık, aynı sayıya tekrar dokunursan tekile döner.
+// `allowFailure` (sadece Tekrar) verilirse "Tükenene kadar" checkbox'ı eklenir —
+// bulkParse.js'te UNTIL_FAILURE_RE ile eşleşen TEK serbest metin değeri bu, Rir hiç
+// metin almadığı için orada checkbox yok.
+function openRangePicker({ title, max, current, allowFailure, onSelect }) {
+  const backdrop = document.createElement('div');
+  backdrop.className = 'sheet-backdrop';
+  const isFailure = !!allowFailure && current === UNTIL_FAILURE_TEXT;
+  let { start, end } = isFailure ? { start: null, end: null } : parseRangeValue(current);
+
+  backdrop.innerHTML = `
+    <div class="sheet">
+      <div class="sheet-title">${escapeHtml(title)}</div>
+      ${allowFailure ? `
+        <div class="checkbox-row">
+          <input type="checkbox" id="range-failure-check"${isFailure ? ' checked' : ''}>
+          <label for="range-failure-check">Tükenene kadar</label>
+        </div>
+      ` : ''}
+      <div class="range-readout"></div>
+      <button type="button" class="zero-btn" data-value="0">0</button>
+      <hr class="zero-divider">
+      <div class="number-picker-grid"></div>
+      <button type="button" class="btn btn-block sheet-close">Kapat</button>
+    </div>
+  `;
+  document.body.appendChild(backdrop);
+
+  const grid = backdrop.querySelector('.number-picker-grid');
+  const zeroBtn = backdrop.querySelector('.zero-btn');
+  const readout = backdrop.querySelector('.range-readout');
+  const checkbox = backdrop.querySelector('#range-failure-check');
+
+  function pick(i) {
+    if (start == null || end != null) { start = i; end = null; }
+    else { end = i; }
+    render();
+  }
+
+  function render() {
+    let cells = '';
+    for (let i = 1; i <= max; i++) {
+      const inRange = start != null && end != null && i >= Math.min(start, end) && i <= Math.max(start, end);
+      const isEdge = i === start || i === end;
+      cells += `<button type="button" class="number-picker-cell${isEdge ? ' selected' : inRange ? ' range-mid' : ''}" data-value="${i}">${i}</button>`;
+    }
+    grid.innerHTML = cells;
+    zeroBtn.classList.toggle('selected', start === 0 || end === 0);
+    updateReadout();
+    updateFailureState();
+    const selectedEl = grid.querySelector('.selected');
+    if (selectedEl) selectedEl.scrollIntoView({ block: 'center' });
+  }
+
+  function updateReadout() {
+    if (checkbox && checkbox.checked) { readout.textContent = 'Tükenene kadar seçili'; return; }
+    if (start != null && end != null) {
+      readout.textContent = formatRangeValue(start, end) + ' seçili';
+    } else if (start != null) {
+      readout.textContent = start + ' seçili — aralık için ikinci sayıya dokun';
+    } else {
+      readout.textContent = '';
+    }
+  }
+
+  function updateFailureState() {
+    if (!checkbox) return;
+    grid.classList.toggle('grid-disabled', checkbox.checked);
+    zeroBtn.classList.toggle('grid-disabled', checkbox.checked);
+  }
+
+  grid.addEventListener('click', (e) => {
+    const cell = e.target.closest('.number-picker-cell');
+    if (cell) pick(Number(cell.dataset.value));
+  });
+  zeroBtn.addEventListener('click', () => pick(0));
+  if (checkbox) checkbox.addEventListener('change', () => { updateReadout(); updateFailureState(); });
+
+  function close() {
+    onSelect(checkbox && checkbox.checked ? UNTIL_FAILURE_TEXT : formatRangeValue(start, end));
+    backdrop.remove();
+  }
+  backdrop.querySelector('.sheet-close').addEventListener('click', close);
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+
+  render();
+}
 function buildActualSetsFromPrescribed(prescribed, isDuration) {
   const count = Math.max(1, Number(prescribed.setCount) || 1);
   const reps = String(extractLeadingInt(prescribed.reps, 0));
@@ -273,10 +421,22 @@ function buildExerciseRow(ex, block, exList) {
       <button type="button" class="btn-icon danger bulk-ex-remove" aria-label="Satırı sil">×</button>
     </div>
     <div class="bulk-exercise-row-fields">
-      <input type="text" class="bulk-ex-field" data-field="weight" value="${escapeHtml(ex.weight)}" placeholder="Ağırlık">
-      <input type="number" class="bulk-ex-field" data-field="setCount" value="${ex.setCount === '' ? '' : ex.setCount}" placeholder="Set" min="1" inputmode="numeric">
-      <input type="text" class="bulk-ex-field" data-field="reps" value="${escapeHtml(ex.reps)}" placeholder="Tekrar">
-      <input type="text" class="bulk-ex-field" data-field="rir" value="${escapeHtml(ex.rir)}" placeholder="Rir">
+      <div class="field">
+        <label>Ağırlık</label>
+        <input type="text" class="bulk-ex-field" data-field="weight" value="${escapeHtml(ex.weight)}">
+      </div>
+      <div class="field">
+        <label>Set</label>
+        <button type="button" class="bulk-picker-trigger${ex.setCount === '' ? ' empty' : ''}" data-field="setCount">${escapeHtml(fieldDisplay(ex.setCount))}</button>
+      </div>
+      <div class="field">
+        <label>Tekrar</label>
+        <button type="button" class="bulk-picker-trigger${ex.reps === '' ? ' empty' : ''}" data-field="reps">${escapeHtml(fieldDisplay(ex.reps))}</button>
+      </div>
+      <div class="field">
+        <label>Rir</label>
+        <button type="button" class="bulk-picker-trigger${ex.rir === '' ? ' empty' : ''}" data-field="rir">${escapeHtml(fieldDisplay(ex.rir))}</button>
+      </div>
     </div>
     <input type="text" class="bulk-ex-note" value="${escapeHtml(ex.coachNote)}" placeholder="Hoca notu (opsiyonel)">
   `;
@@ -284,12 +444,52 @@ function buildExerciseRow(ex, block, exList) {
   row.querySelector('.bulk-ex-name').addEventListener('input', (e) => {
     ex.name = e.target.value;
   });
-  row.querySelectorAll('.bulk-ex-field').forEach((input) => {
-    input.addEventListener('input', (e) => {
-      const field = e.target.dataset.field;
-      ex[field] = field === 'setCount' ? (e.target.value ? Number(e.target.value) : '') : e.target.value;
+
+  row.querySelector('.bulk-ex-field[data-field="weight"]').addEventListener('input', (e) => {
+    ex.weight = e.target.value;
+  });
+
+  const setBtn = row.querySelector('[data-field="setCount"]');
+  setBtn.addEventListener('click', () => {
+    openSetPicker({
+      current: ex.setCount === '' ? null : ex.setCount,
+      onSelect: (value) => {
+        ex.setCount = value;
+        setBtn.textContent = fieldDisplay(value);
+        setBtn.classList.remove('empty');
+      },
     });
   });
+
+  const repsBtn = row.querySelector('[data-field="reps"]');
+  repsBtn.addEventListener('click', () => {
+    openRangePicker({
+      title: 'Tekrar',
+      max: REPS_MAX,
+      current: ex.reps,
+      allowFailure: true,
+      onSelect: (value) => {
+        ex.reps = value;
+        repsBtn.textContent = fieldDisplay(value);
+        repsBtn.classList.toggle('empty', value === '');
+      },
+    });
+  });
+
+  const rirBtn = row.querySelector('[data-field="rir"]');
+  rirBtn.addEventListener('click', () => {
+    openRangePicker({
+      title: 'Rir',
+      max: RIR_MAX,
+      current: ex.rir,
+      onSelect: (value) => {
+        ex.rir = value;
+        rirBtn.textContent = fieldDisplay(value);
+        rirBtn.classList.toggle('empty', value === '');
+      },
+    });
+  });
+
   row.querySelector('.bulk-ex-note').addEventListener('input', (e) => {
     ex.coachNote = e.target.value;
   });
