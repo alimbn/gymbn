@@ -106,7 +106,7 @@ function renderJoinForm(role, token, invite) {
       return;
     }
 
-    location.href = './index.html';
+    location.href = role === 'coach' ? './coach.html' : './index.html';
   }
 
   submitBtn.addEventListener('click', trySubmit);
