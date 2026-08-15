@@ -2186,3 +2186,60 @@ body.chrome-hidden .rest-timer-btn {
 .sheet-field input[type="date"] {
   flex: 0 0 150px;
 }
+
+.measure-progress-title {
+  margin-top: var(--space-4);
+}
+
+.measure-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.measure-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+}
+
+.measure-card-info {
+  flex-shrink: 0;
+  width: 84px;
+}
+
+.measure-card-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.measure-card-val {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 18px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.measure-card-delta {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.measure-card-dates {
+  font-size: 10px;
+  color: var(--text-suggested);
+  margin-top: 3px;
+}
+
+.measure-card svg.spark {
+  flex: 1;
+  height: 34px;
+}

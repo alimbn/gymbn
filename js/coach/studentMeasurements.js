@@ -124,9 +124,91 @@ function renderScreen(container, studentUid, student, state) {
         }).join('')}
       </div>
     </div>
+    ${buildProgressSection(state.measurements)}
   `;
 
   wireScreen(container, studentUid, student, state);
+  wireProgressSparklines(container, state.measurements);
+}
+
+// En az 2 kaydı olan ölçümler için küçük bir eğilim kartı — tek kayıtla eğilim
+// göstermenin anlamı yok, o yüzden yeni girilen bir ölçüm ikinci kayda kadar
+// burada görünmüyor. "goodDir" (artış mı azalış mı iyi) bilerek eklenmedi —
+// bu, öğrencinin hedefine (kesme/kütle) bağlı, uygulama bunu bilmiyor; nötr
+// bir ok+fark gösteriliyor, yorum yapılmıyor.
+function buildProgressSection(measurements) {
+  const withHistory = MEASUREMENT_TYPES.filter((m) => recordsFor(measurements, m.type).length >= 2);
+  if (!withHistory.length) return '';
+  return `
+    <div class="section-title measure-progress-title">İlerleme</div>
+    <div class="measure-cards" id="measure-cards">
+      ${withHistory.map((m) => {
+        const recs = recordsFor(measurements, m.type);
+        const first = recs[0];
+        const last = recs[recs.length - 1];
+        const delta = Math.round((last.value - first.value) * 100) / 100;
+        const arrow = delta > 0 ? '↑' : delta < 0 ? '↓' : '→';
+        return `
+          <div class="measure-card" data-type="${m.type}">
+            <div class="measure-card-info">
+              <div class="measure-card-label">${escapeHtml(m.label)}</div>
+              <div class="measure-card-val">${escapeHtml(String(last.value))}${m.unit}</div>
+              <div class="measure-card-delta">${arrow} ${Math.abs(delta)}${m.unit}</div>
+              <div class="measure-card-dates">${formatDateShortTr(first.date)} → ${formatDateShortTr(last.date)}</div>
+            </div>
+            <svg class="spark" viewBox="0 0 140 40"></svg>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function wireProgressSparklines(container, measurements) {
+  container.querySelectorAll('.measure-card').forEach((card) => {
+    const type = card.dataset.type;
+    const values = recordsFor(measurements, type).map((r) => r.value);
+    buildSparkline(card.querySelector('.spark'), values);
+  });
+}
+
+// setRows.js/dayEntry.js'in kalıcı label deseniyle aynı ruhta, ama bu kez bir
+// çizgi grafik — brainstorm demosundaki buildLineChart'ın tek-seri, sade kopyası.
+function buildSparkline(svg, values, { w = 140, h = 40, pad = 6 } = {}) {
+  if (values.length < 2) return;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const stepX = (w - pad * 2) / (values.length - 1);
+  const points = values.map((v, i) => [pad + i * stepX, pad + (h - pad * 2) * (1 - (v - min) / range)]);
+  const pathD = points.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+  const color = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
+
+  const areaD = `${pathD} L${points[points.length - 1][0]},${h - pad} L${points[0][0]},${h - pad} Z`;
+  const area = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  area.setAttribute('d', areaD);
+  area.setAttribute('fill', color);
+  area.setAttribute('opacity', '0.14');
+  svg.appendChild(area);
+
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', pathD);
+  path.setAttribute('fill', 'none');
+  path.setAttribute('stroke', color);
+  path.setAttribute('stroke-width', '2');
+  path.setAttribute('stroke-linecap', 'round');
+  path.setAttribute('stroke-linejoin', 'round');
+  svg.appendChild(path);
+
+  const last = points[points.length - 1];
+  const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  ring.setAttribute('cx', last[0]); ring.setAttribute('cy', last[1]); ring.setAttribute('r', '7');
+  ring.setAttribute('fill', color); ring.setAttribute('opacity', '0.22');
+  svg.appendChild(ring);
+  const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  dot.setAttribute('cx', last[0]); dot.setAttribute('cy', last[1]); dot.setAttribute('r', '3.5');
+  dot.setAttribute('fill', color);
+  svg.appendChild(dot);
 }
 
 function wireScreen(container, studentUid, student, state) {
