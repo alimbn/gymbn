@@ -14,6 +14,7 @@ export async function render(container) {
     addPlaceholder: 'Hoca adı',
     addButtonLabel: 'Hoca Davet Et',
     emptyText: 'Henüz hoca eklenmedi.',
+    statLabel: 'Hoca',
     loadItems: async () => {
       const coaches = await listCoachesWithCounts();
       return coaches
