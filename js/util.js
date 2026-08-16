@@ -118,6 +118,12 @@ export function regionColor(name) {
   return EXERCISE_REGIONS.find((r) => r.name === name)?.color || null;
 }
 
+const YOUTUBE_ID_RE = /(?:youtube\.com\/watch\?v=|youtube\.com\/embed\/|youtube\.com\/shorts\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+
+export function youTubeEmbedId(url) {
+  return url?.match(YOUTUBE_ID_RE)?.[1] || null;
+}
+
 const SHOW_EXERCISE_MEDIA_KEY = 'gymbn_showExerciseMedia';
 
 export function isExerciseMediaEnabled() {
