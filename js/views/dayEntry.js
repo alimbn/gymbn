@@ -5,7 +5,7 @@ import {
 } from '../storage.js';
 import {
   dayOfWeekLabel, formatDateShortTr, escapeHtml, statusBadge, formatDuration, vibrate,
-  ICON_TRASH, ICON_NOTE, ICON_COACH, ICON_DUMBBELL, regionColor, isExerciseMediaEnabled,
+  ICON_TRASH, ICON_NOTE, ICON_COACH, ICON_DUMBBELL, regionColor, isExerciseMediaEnabled, youTubeEmbedId,
 } from '../util.js';
 import { renderSetRows } from '../components/setRows.js';
 import { openPicker } from '../components/picker.js';
@@ -301,6 +301,7 @@ function buildExpandedBody(bodyEl, entry, inst, onStatusSet) {
   const repsLabel = isDuration ? 'Süre (sn)' : 'Tekrar';
   const rirLabel = isDuration ? 'Rezerv (sn)' : 'Rir';
   const showMedia = isExerciseMediaEnabled() && exercise && (exercise.targetRegion || exercise.videoUrl);
+  const ytId = exercise && exercise.videoUrl ? youTubeEmbedId(exercise.videoUrl) : null;
 
   bodyEl.innerHTML = `
     ${showMedia ? `
@@ -310,9 +311,13 @@ function buildExpandedBody(bodyEl, entry, inst, onStatusSet) {
     </div>
     ${exercise.videoUrl ? `
     <div class="video-embed-frame">
+      ${ytId ? `
+      <div class="video-embed-thumb youtube-thumb" data-yt-id="${ytId}">
+        <span class="video-play-btn"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M9 7.5v9l7-4.5-7-4.5Z"/></svg></span>
+      </div>` : `
       <a class="video-embed-thumb" href="${escapeHtml(exercise.videoUrl)}" target="_blank" rel="noopener">
         <span class="video-play-btn"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M9 7.5v9l7-4.5-7-4.5Z"/></svg></span>
-      </a>
+      </a>`}
       <div class="video-embed-caption">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 15l6-6M10.5 8H15v4.5M6 12l-2 2a3 3 0 104 4l2-2"/></svg>
         <span>${escapeHtml(exercise.videoUrl)}</span>
@@ -391,6 +396,18 @@ function buildExpandedBody(bodyEl, entry, inst, onStatusSet) {
       const open = frame.classList.toggle('open');
       videoToggle.textContent = open ? '▾ Hareketi Gizle' : '▶ Hareketi Gör';
     });
+  }
+
+  const youtubeThumb = bodyEl.querySelector('.youtube-thumb');
+  if (youtubeThumb) {
+    youtubeThumb.addEventListener('click', () => {
+      const iframe = document.createElement('iframe');
+      iframe.className = 'video-embed-iframe';
+      iframe.src = `https://www.youtube-nocookie.com/embed/${youtubeThumb.dataset.ytId}?autoplay=1`;
+      iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+      iframe.setAttribute('allowfullscreen', '');
+      youtubeThumb.replaceWith(iframe);
+    }, { once: true });
   }
 
   const setRowsMount = bodyEl.querySelector('.set-rows-mount');
