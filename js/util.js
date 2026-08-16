@@ -155,6 +155,16 @@ export function setRestTimerAutoResetEnabled(enabled) {
   localStorage.setItem(REST_TIMER_AUTO_RESET_KEY, enabled ? '1' : '0');
 }
 
+const REST_TIMER_BIG_KEY = 'gymbn_restTimerBig';
+
+export function isRestTimerBigEnabled() {
+  return localStorage.getItem(REST_TIMER_BIG_KEY) === '1';
+}
+
+export function setRestTimerBigEnabled(big) {
+  localStorage.setItem(REST_TIMER_BIG_KEY, big ? '1' : '0');
+}
+
 export function escapeHtml(str) {
   return String(str ?? '').replace(/[&<>"']/g, (ch) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
