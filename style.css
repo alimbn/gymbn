@@ -2112,27 +2112,59 @@ body.chrome-hidden #view-root {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   touch-action: none;
   user-select: none;
+  transition: width 0.25s cubic-bezier(0.32, 0.9, 0.28, 1), height 0.25s cubic-bezier(0.32, 0.9, 0.28, 1), font-size 0.25s ease;
+}
+
+.rest-timer-btn.big {
+  width: 192px;
+  height: 192px;
+  font-size: 38px;
+  border-width: 4px;
 }
 
 .rest-timer-btn.running {
   background: var(--primary);
   border-color: var(--primary);
   color: var(--primary-text);
-  animation: rest-timer-pulse 1.8s ease-in-out infinite;
 }
 
 .rest-timer-btn.dragging {
   opacity: 0.85;
-  animation: none;
+  transition: none;
 }
 
-@keyframes rest-timer-pulse {
-  0%, 100% {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 0 0 rgba(201, 161, 90, 0.55);
-  }
-  50% {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 0 16px rgba(201, 161, 90, 0);
-  }
+.rest-timer-btn.dragging .ripple-ring {
+  animation: none;
+  opacity: 0;
+}
+
+.rest-timer-time {
+  position: relative;
+  z-index: 1;
+}
+
+/* Uzun basış boyu değiştirdiğinde de aynı ripple kullanılsın diye — büyük/küçük
+   fark etmeksizin tek animasyon dili (kullanıcı isteği: "küçükte de bu efekte dön"). */
+.ripple-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--primary);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.rest-timer-btn.running .ripple-ring {
+  animation: rest-timer-ripple 2.4s ease-out infinite;
+}
+
+.rest-timer-btn.running .ripple-ring.d2 {
+  animation-delay: 1.2s;
+}
+
+@keyframes rest-timer-ripple {
+  0% { transform: scale(1); opacity: 0.7; }
+  100% { transform: scale(1.55); opacity: 0; }
 }
 
 body.auth-gate .rest-timer-btn,

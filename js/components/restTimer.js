@@ -1,26 +1,33 @@
-import { isRestTimerAutoResetEnabled, vibrate } from '../util.js';
+import { isRestTimerAutoResetEnabled, isRestTimerBigEnabled, setRestTimerBigEnabled, vibrate } from '../util.js';
 
 const DRAG_THRESHOLD = 8;
 const LONG_PRESS_MS = 600;
 const IDLE_RESET_MS = 60000;
+const TAP_WINDOW_MS = 300;
 
 // Set arası dinlenmeyi takip eden, tüm ekranlar boyunca kaybolmayan (document.body'ye
 // doğrudan eklenen, #view-root'un dışında olduğu için router yeniden render ettiğinde
-// silinmeyen) sürüklenebilir bir kronometre. Tek dokunuş başlat/duraklat, uzun basış
-// sıfırlar, sürükleme yeniden konumlandırır — üçü aynı pointer olayları üzerinden
-// ayırt ediliyor.
+// silinmeyen) sürüklenebilir bir kronometre. Tek dokunuş başlat/duraklat (anında, gecikmesiz),
+// çift dokunuş (300ms içinde ikinci dokunuş) sıfırlar, uzun basış büyük/küçük boy arasında
+// geçiş yapar, sürükleme yeniden konumlandırır — dördü de aynı pointer olayları üzerinden
+// ayırt ediliyor. Çift dokunuş, ilk dokunuşun başlat/durdur'u ANINDA tetikleyip ikinci dokunuş
+// gelirse onu geri alması şeklinde kurulu (klasik "bekle-sonra-karar-ver" değil) — en sık
+// kullanılan tek-dokunuş hiç gecikmiyor, bedeli sadece çift dokunulduğunda kısa bir yanıp sönme.
 export function initRestTimer() {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.id = 'rest-timer-btn';
-  btn.className = 'rest-timer-btn';
-  btn.textContent = '00:00';
+  btn.className = 'rest-timer-btn' + (isRestTimerBigEnabled() ? ' big' : '');
+  btn.innerHTML = '<span class="rest-timer-time">00:00</span><span class="ripple-ring"></span><span class="ripple-ring d2"></span>';
   document.body.appendChild(btn);
+
+  const timeEl = btn.querySelector('.rest-timer-time');
 
   let seconds = 0;
   let running = false;
   let intervalId = null;
   let idleResetTimer = null;
+  let lastTapTime = 0;
 
   let pointerDown = false;
   let dragMoved = false;
@@ -34,7 +41,7 @@ export function initRestTimer() {
   function render() {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
-    btn.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    timeEl.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   }
 
   function toggle() {
@@ -55,7 +62,7 @@ export function initRestTimer() {
   // Duraklatılmış (çalışmayan) kronometre 1dk boyunca dokunulmadan kalırsa
   // kendini sıfırlıyor — amaç, bir seti bitirip dinlenmeyi durdurduktan sonra
   // bir sonraki sete girerken hâlâ eski süreyi gösterip elle sıfırlatmaması.
-  // Uzun-basış sıfırlaması bu özelliğe rağmen aynen çalışmaya devam ediyor.
+  // Çift-dokunuş sıfırlaması bu özelliğe rağmen aynen çalışmaya devam ediyor.
   function scheduleIdleReset() {
     clearTimeout(idleResetTimer);
     if (seconds === 0 || !isRestTimerAutoResetEnabled()) return;
@@ -71,6 +78,12 @@ export function initRestTimer() {
     seconds = 0;
     btn.classList.remove('running');
     render();
+  }
+
+  function toggleSize() {
+    const big = !btn.classList.contains('big');
+    btn.classList.toggle('big', big);
+    setRestTimerBigEnabled(big);
   }
 
   function clamp(value, min, max) {
@@ -92,7 +105,7 @@ export function initRestTimer() {
       if (!dragMoved) {
         longPressFired = true;
         vibrate(15);
-        reset();
+        toggleSize();
       }
     }, LONG_PRESS_MS);
   });
@@ -128,7 +141,15 @@ export function initRestTimer() {
       longPressFired = false;
       return;
     }
-    toggle();
+    const now = Date.now();
+    if (now - lastTapTime < TAP_WINDOW_MS) {
+      lastTapTime = 0;
+      vibrate(15);
+      reset();
+    } else {
+      lastTapTime = now;
+      toggle();
+    }
   }
 
   btn.addEventListener('pointerup', endPointer);
