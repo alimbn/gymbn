@@ -3,7 +3,10 @@ import {
   dayTypes, exercises, addExerciseInstance, removeExerciseInstance, updateInstancePrescribed,
   updateInstanceNote, updateInstanceStatus, getLastInstance,
 } from '../storage.js';
-import { dayOfWeekLabel, formatDateShortTr, escapeHtml, statusBadge, formatDuration, vibrate, ICON_TRASH, ICON_NOTE, ICON_COACH } from '../util.js';
+import {
+  dayOfWeekLabel, formatDateShortTr, escapeHtml, statusBadge, formatDuration, vibrate,
+  ICON_TRASH, ICON_NOTE, ICON_COACH, ICON_DUMBBELL, regionColor, isExerciseMediaEnabled,
+} from '../util.js';
 import { renderSetRows } from '../components/setRows.js';
 import { openPicker } from '../components/picker.js';
 import { confirmSheet } from '../components/confirmSheet.js';
@@ -259,6 +262,8 @@ function buildExerciseCard(entry, inst, isExpanded, onToggle, refreshCards, onSt
   const card = document.createElement('div');
   card.className = 'exercise-card' + (isExpanded ? ' expanded' : ' collapsed') + (inst.status ? ' marked' : '');
   const exercise = exercises.byId(inst.exerciseId);
+  const regionColorVal = exercise ? regionColor(exercise.targetRegion) : null;
+  if (regionColorVal) card.style.setProperty('--region-color', regionColorVal);
 
   card.innerHTML = `
     <div class="exercise-card-header">
@@ -295,8 +300,25 @@ function buildExpandedBody(bodyEl, entry, inst, onStatusSet) {
   const isDuration = !!(exercise && exercise.isDuration);
   const repsLabel = isDuration ? 'Süre (sn)' : 'Tekrar';
   const rirLabel = isDuration ? 'Rezerv (sn)' : 'Rir';
+  const showMedia = isExerciseMediaEnabled() && exercise && (exercise.targetRegion || exercise.videoUrl);
 
   bodyEl.innerHTML = `
+    ${showMedia ? `
+    <div class="exercise-media-row">
+      ${exercise.targetRegion ? `<span class="target-pill">${ICON_DUMBBELL}${escapeHtml(exercise.targetRegion)}</span>` : '<span></span>'}
+      ${exercise.videoUrl ? '<button type="button" class="video-toggle-btn">▶ Hareketi Gör</button>' : ''}
+    </div>
+    ${exercise.videoUrl ? `
+    <div class="video-embed-frame">
+      <a class="video-embed-thumb" href="${escapeHtml(exercise.videoUrl)}" target="_blank" rel="noopener">
+        <span class="video-play-btn"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M9 7.5v9l7-4.5-7-4.5Z"/></svg></span>
+      </a>
+      <div class="video-embed-caption">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 15l6-6M10.5 8H15v4.5M6 12l-2 2a3 3 0 104 4l2-2"/></svg>
+        <span>${escapeHtml(exercise.videoUrl)}</span>
+      </div>
+    </div>` : ''}
+    ` : ''}
     <div class="last-time">${last ? `Son sefer (${formatDateShortTr(last.date)}): ${formatSetsSummary(last.actualSets, isDuration)}` : 'İlk kez yapılıyor.'}</div>
     <div class="prescribed-block">
       <div class="block-label">${ICON_COACH}Hoca</div>
@@ -361,6 +383,15 @@ function buildExpandedBody(bodyEl, entry, inst, onStatusSet) {
   noteTextarea.addEventListener('input', () => {
     updateInstanceNote(entry.id, inst.id, noteTextarea.value);
   });
+
+  const videoToggle = bodyEl.querySelector('.video-toggle-btn');
+  if (videoToggle) {
+    const frame = bodyEl.querySelector('.video-embed-frame');
+    videoToggle.addEventListener('click', () => {
+      const open = frame.classList.toggle('open');
+      videoToggle.textContent = open ? '▾ Hareketi Gizle' : '▶ Hareketi Gör';
+    });
+  }
 
   const setRowsMount = bodyEl.querySelector('.set-rows-mount');
   function mountSetRows() {
