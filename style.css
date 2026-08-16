@@ -302,6 +302,15 @@ button {
   color: var(--primary);
 }
 
+.media-btn {
+  opacity: 0.4;
+}
+
+.media-btn.active {
+  opacity: 1;
+  color: var(--primary);
+}
+
 /* Forms */
 
 .field {
@@ -551,26 +560,47 @@ a.list-item {
 /* Exercise instance card (day entry) */
 
 .exercise-card {
-  border-bottom: 1px solid var(--border);
-  padding: var(--space-4) 2px;
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 20px -12px rgba(0, 0, 0, 0.6);
+  padding: var(--space-3) var(--space-4) var(--space-4) 20px;
+  margin-top: -18px;
   scroll-margin-top: calc(var(--header-h) + var(--safe-top) + var(--space-3));
 }
 
 .exercise-card:first-child {
-  border-top: 1px solid var(--border);
+  margin-top: 0;
+}
+
+/* Hedef bölge kenar çizgisi — dayEntry.js exercise.targetRegion varsa
+   --region-color'ı inline set ediyor (util.js:regionColor), yoksa nötr kalır. */
+.exercise-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--region-color, var(--border-strong));
+}
+
+.exercise-card.expanded {
+  box-shadow: 0 16px 30px -14px rgba(0, 0, 0, 0.65);
 }
 
 .exercise-card-header {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin-bottom: var(--space-2);
   cursor: pointer;
   min-height: 28px;
 }
 
-.exercise-card.collapsed .exercise-card-header {
-  margin-bottom: 0;
+.exercise-card-body:not(:empty) {
+  margin-top: var(--space-2);
 }
 
 .accordion-chevron {
@@ -683,6 +713,109 @@ a.list-item {
 @keyframes status-badge-ring-burst {
   0% { transform: scale(0.7); opacity: 0.7; }
   100% { transform: scale(1.9); opacity: 0; }
+}
+
+/* Hedef bölge + hareket videosu (opsiyonel, Diğer > Ayarlar'dan kapatılabilir) */
+
+.exercise-media-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.target-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px 4px 7px;
+}
+
+.target-pill svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+.note-toggle,
+.video-toggle-btn {
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  font-size: 13px;
+  padding: var(--space-2) 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.video-embed-frame {
+  margin: 0 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  display: none;
+}
+
+.video-embed-frame.open {
+  display: block;
+}
+
+.video-embed-thumb {
+  aspect-ratio: 16 / 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(201, 161, 90, 0.16), transparent 60%),
+    var(--surface-2);
+}
+
+.video-play-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1.5px solid var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  background: rgba(18, 19, 22, 0.55);
+}
+
+.video-play-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.video-embed-caption {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.video-embed-caption svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.video-embed-caption span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .last-time {
@@ -1274,15 +1407,6 @@ a.list-item {
 
 /* Notes */
 
-.note-toggle {
-  background: transparent;
-  border: none;
-  color: var(--primary);
-  font-size: 13px;
-  padding: var(--space-2) 0;
-  cursor: pointer;
-}
-
 .note-textarea {
   margin-top: var(--space-2);
 }
@@ -1448,6 +1572,12 @@ a.list-item {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
+}
+
+.setting-row + .setting-row {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
 }
 
 .setting-row-text {

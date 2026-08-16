@@ -1,7 +1,7 @@
-import { escapeHtml, ICON_TRASH } from '../util.js';
+import { escapeHtml, ICON_TRASH, ICON_MEDIA, EXERCISE_REGIONS } from '../util.js';
 import { confirmSheet } from './confirmSheet.js';
 
-export function renderLibraryList(container, { title, store, placeholder, backHref, showDurationToggle }) {
+export function renderLibraryList(container, { title, store, placeholder, backHref, showDurationToggle, showMediaEditor }) {
   container.innerHTML = `
     <div class="view-header">
       <a href="${backHref}" class="back-link" aria-label="Geri">←</a>
@@ -33,6 +33,7 @@ export function renderLibraryList(container, { title, store, placeholder, backHr
         </div>
         <div class="list-item-actions">
           ${showDurationToggle ? `<button type="button" class="btn-icon duration-toggle-btn${item.isDuration ? ' active' : ''}" aria-label="Süre-bazlı egzersiz" title="Süre-bazlı egzersiz">⏱</button>` : ''}
+          ${showMediaEditor ? `<button type="button" class="btn-icon media-btn${(item.videoUrl || item.targetRegion) ? ' active' : ''}" aria-label="Video ve hedef bölge" title="Video ve hedef bölge">${ICON_MEDIA}</button>` : ''}
           <button type="button" class="btn-icon edit-btn" aria-label="Düzenle">✎</button>
           <button type="button" class="btn-icon danger delete-btn" aria-label="Sil">${ICON_TRASH}</button>
         </div>
@@ -89,8 +90,45 @@ export function renderLibraryList(container, { title, store, placeholder, backHr
       const item = store.byId(row.dataset.id);
       store.setDuration(row.dataset.id, !item.isDuration);
       renderItems();
+    } else if (e.target.closest('.media-btn')) {
+      openMediaSheet(store.byId(row.dataset.id));
     }
   });
+
+  function openMediaSheet(item) {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'sheet-backdrop';
+    backdrop.innerHTML = `
+      <div class="sheet">
+        <div class="sheet-title">${escapeHtml(item.name)}</div>
+        <div class="sheet-sub">Video linki ve hedef bölge ekle</div>
+        <div class="field">
+          <label>Video linki</label>
+          <input type="text" id="media-url" placeholder="https://..." value="${escapeHtml(item.videoUrl || '')}">
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Hedef bölge</label>
+          <select id="media-region">
+            <option value="">Seçilmedi</option>
+            ${EXERCISE_REGIONS.map((r) => `<option value="${escapeHtml(r.name)}"${item.targetRegion === r.name ? ' selected' : ''}>${escapeHtml(r.name)}</option>`).join('')}
+          </select>
+        </div>
+        <button type="button" class="btn btn-primary btn-block" id="media-save">Kaydet</button>
+      </div>
+    `;
+    document.body.appendChild(backdrop);
+
+    function close() { backdrop.remove(); }
+    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+
+    backdrop.querySelector('#media-save').addEventListener('click', () => {
+      const videoUrl = backdrop.querySelector('#media-url').value.trim();
+      const targetRegion = backdrop.querySelector('#media-region').value;
+      store.setMedia(item.id, { videoUrl, targetRegion });
+      close();
+      renderItems();
+    });
+  }
 
   listRoot.addEventListener('keydown', (e) => {
     if (!e.target.classList.contains('edit-input')) return;

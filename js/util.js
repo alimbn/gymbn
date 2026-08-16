@@ -97,6 +97,37 @@ export function vibrate(pattern) {
 export const ICON_TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h16M9 6V4h6v2M6 6l1 14h10l1-14"/></svg>';
 export const ICON_NOTE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 11.5a8.4 8.4 0 0 1-8.9 8.4 9 9 0 0 1-3.6-.7L3 20l1-4.7a8.3 8.3 0 0 1-.9-3.8A8.4 8.4 0 0 1 12 3a8.3 8.3 0 0 1 9 8.5Z"/></svg>';
 export const ICON_COACH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l18-7-7 18-3-8-8-3Z"/></svg>';
+export const ICON_DUMBBELL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6.5 9v6M4 10.5v3M17.5 9v6M20 10.5v3M6.5 12h11"/></svg>';
+export const ICON_MEDIA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M10 8.5l6 3.5-6 3.5v-7Z" fill="currentColor" stroke="none"/></svg>';
+
+// Egzersiz hedef bölgeleri: sabit liste (serbest metin değil), rengi de burada
+// tanımlı — hem kütüphanedeki seçim kutusu hem dayEntry.js'teki kenar çizgisi
+// aynı listeyi kullanıyor, tek yerden değişir.
+export const EXERCISE_REGIONS = [
+  { name: 'Göğüs', color: '#b56b5c' },
+  { name: 'Sırt', color: '#5c8f7a' },
+  { name: 'Omuz', color: '#c9a15a' },
+  { name: 'Kol', color: '#6b84a8' },
+  { name: 'Bacak', color: '#8a6a9c' },
+  { name: 'Kalça', color: '#b58a5c' },
+  { name: 'Karın', color: '#6f8a8f' },
+  { name: 'Tüm Vücut', color: '#8b8f98' },
+];
+
+export function regionColor(name) {
+  return EXERCISE_REGIONS.find((r) => r.name === name)?.color || null;
+}
+
+const SHOW_EXERCISE_MEDIA_KEY = 'gymbn_showExerciseMedia';
+
+export function isExerciseMediaEnabled() {
+  const v = localStorage.getItem(SHOW_EXERCISE_MEDIA_KEY);
+  return v === null ? true : v === '1';
+}
+
+export function setExerciseMediaEnabled(enabled) {
+  localStorage.setItem(SHOW_EXERCISE_MEDIA_KEY, enabled ? '1' : '0');
+}
 
 export function formatDuration(totalSeconds) {
   const s = Math.max(0, Math.round(totalSeconds));

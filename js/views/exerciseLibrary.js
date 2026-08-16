@@ -8,5 +8,6 @@ export function render(container) {
     placeholder: 'Yeni egzersiz adı',
     backHref: '#/more',
     showDurationToggle: true,
+    showMediaEditor: true,
   });
 }
