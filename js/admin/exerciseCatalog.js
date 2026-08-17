@@ -16,8 +16,9 @@ export async function render(container, { onBack }) {
     </div>
     <form class="add-form" id="add-form">
       <input type="text" id="add-input" placeholder="Yeni egzersiz adı" autocomplete="off">
-      <button type="submit" class="btn btn-primary">Ekle</button>
+      <button type="submit" class="btn btn-primary" id="add-submit-btn" disabled>Ekle</button>
     </form>
+    <div class="search-hint" id="search-hint"></div>
     <div class="list" id="list-root"><p class="empty-state">Yükleniyor…</p></div>
   `;
 
@@ -26,6 +27,8 @@ export async function render(container, { onBack }) {
   const listRoot = container.querySelector('#list-root');
   const addForm = container.querySelector('#add-form');
   const addInput = container.querySelector('#add-input');
+  const addSubmitBtn = container.querySelector('#add-submit-btn');
+  const searchHint = container.querySelector('#search-hint');
 
   let items = [];
   try {
@@ -39,24 +42,58 @@ export async function render(container, { onBack }) {
   function renderItems() {
     if (!items.length) {
       listRoot.innerHTML = '<p class="empty-state">Henüz eklenmedi.</p>';
-      return;
+    } else {
+      items.sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+      listRoot.innerHTML = items.map((item) => `
+        <div class="list-item" data-id="${item.id}">
+          <div class="list-item-main">
+            <span class="list-item-title view-mode">${escapeHtml(item.name)}</span>
+            <input type="text" class="edit-input" style="display:none" value="${escapeHtml(item.name)}">
+          </div>
+          <div class="list-item-actions">
+            <button type="button" class="btn-icon duration-toggle-btn${item.isDuration ? ' active' : ''}" aria-label="Süre-bazlı egzersiz" title="Süre-bazlı egzersiz">⏱</button>
+            <button type="button" class="btn-icon media-btn${(item.videoUrl || item.targetRegion) ? ' active' : ''}" aria-label="Video ve hedef bölge" title="Video ve hedef bölge">${ICON_MEDIA}</button>
+            <button type="button" class="btn-icon edit-btn" aria-label="Düzenle">✎</button>
+            <button type="button" class="btn-icon danger delete-btn" aria-label="Sil">${ICON_TRASH}</button>
+          </div>
+        </div>
+      `).join('');
     }
-    items.sort((a, b) => a.name.localeCompare(b.name, 'tr'));
-    listRoot.innerHTML = items.map((item) => `
-      <div class="list-item" data-id="${item.id}">
-        <div class="list-item-main">
-          <span class="list-item-title view-mode">${escapeHtml(item.name)}</span>
-          <input type="text" class="edit-input" style="display:none" value="${escapeHtml(item.name)}">
-        </div>
-        <div class="list-item-actions">
-          <button type="button" class="btn-icon duration-toggle-btn${item.isDuration ? ' active' : ''}" aria-label="Süre-bazlı egzersiz" title="Süre-bazlı egzersiz">⏱</button>
-          <button type="button" class="btn-icon media-btn${(item.videoUrl || item.targetRegion) ? ' active' : ''}" aria-label="Video ve hedef bölge" title="Video ve hedef bölge">${ICON_MEDIA}</button>
-          <button type="button" class="btn-icon edit-btn" aria-label="Düzenle">✎</button>
-          <button type="button" class="btn-icon danger delete-btn" aria-label="Sil">${ICON_TRASH}</button>
-        </div>
-      </div>
-    `).join('');
+    applyFilter();
   }
+
+  // Yazarken listeyi anlık filtrele (rosterUi.js'teki aynı arama mantığı) — VE
+  // "Ekle" düğmesini SADECE isim hiçbir mevcut kayıtla eşleşmiyorsa aktif et.
+  // Amaç: aynı hareketin yazım farkıyla (ör. "Barfiks"/"barfiks ") iki kez
+  // eklenmesini engellemek — kullanıcının kendi isteği.
+  function rowMatches(row, q) {
+    const title = row.querySelector('.list-item-title');
+    return !q || (title && title.textContent.toLocaleLowerCase('tr').includes(q));
+  }
+
+  function applyFilter() {
+    const q = addInput.value.trim().toLocaleLowerCase('tr');
+    let visible = 0;
+    listRoot.querySelectorAll('.list-item').forEach((row) => {
+      const match = rowMatches(row, q);
+      row.classList.toggle('hidden-by-filter', !match);
+      if (match) visible++;
+    });
+    if (!q) {
+      searchHint.textContent = '';
+      searchHint.classList.remove('active');
+      addSubmitBtn.disabled = true;
+    } else if (visible === 0) {
+      searchHint.textContent = 'Bu isimde bir egzersiz yok, yeni ekleyebilirsin.';
+      searchHint.classList.remove('active');
+      addSubmitBtn.disabled = false;
+    } else {
+      searchHint.textContent = `${visible} benzer kayıt var, önce onlara bak.`;
+      searchHint.classList.add('active');
+      addSubmitBtn.disabled = true;
+    }
+  }
+  addInput.addEventListener('input', applyFilter);
 
   function enterEdit(row) {
     row.querySelector('.view-mode').style.display = 'none';
@@ -90,6 +127,7 @@ export async function render(container, { onBack }) {
 
   addForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (addSubmitBtn.disabled) return;
     const name = addInput.value.trim();
     if (!name) return;
     addInput.value = '';
