@@ -5,7 +5,7 @@ import {
 } from '../storage.js';
 import {
   dayOfWeekLabel, formatDateShortTr, escapeHtml, statusBadge, formatDuration, vibrate,
-  ICON_TRASH, ICON_NOTE, ICON_COACH, ICON_DUMBBELL, regionColor, isExerciseMediaEnabled, youTubeEmbedId,
+  ICON_TRASH, ICON_NOTE, ICON_COACH, isExerciseMediaEnabled, youTubeEmbedId,
 } from '../util.js';
 import { renderSetRows } from '../components/setRows.js';
 import { openPicker } from '../components/picker.js';
@@ -262,7 +262,7 @@ function buildExerciseCard(entry, inst, isExpanded, onToggle, refreshCards, onSt
   const card = document.createElement('div');
   card.className = 'exercise-card' + (isExpanded ? ' expanded' : ' collapsed') + (inst.status ? ' marked' : '');
   const exercise = exercises.byId(inst.exerciseId);
-  const regionColorVal = exercise ? regionColor(exercise.targetRegion) : null;
+  const regionColorVal = exercise?.targetRegions?.[0]?.color;
   if (regionColorVal) card.style.setProperty('--region-color', regionColorVal);
 
   card.innerHTML = `
@@ -300,13 +300,15 @@ function buildExpandedBody(bodyEl, entry, inst, onStatusSet) {
   const isDuration = !!(exercise && exercise.isDuration);
   const repsLabel = isDuration ? 'Süre (sn)' : 'Tekrar';
   const rirLabel = isDuration ? 'Rezerv (sn)' : 'Rir';
-  const showMedia = isExerciseMediaEnabled() && exercise && (exercise.targetRegion || exercise.videoUrl);
+  const showMedia = isExerciseMediaEnabled() && exercise && (exercise.targetRegions?.length || exercise.videoUrl);
   const ytId = exercise && exercise.videoUrl ? youTubeEmbedId(exercise.videoUrl) : null;
 
   bodyEl.innerHTML = `
     ${showMedia ? `
     <div class="exercise-media-row">
-      ${exercise.targetRegion ? `<span class="target-pill">${ICON_DUMBBELL}${escapeHtml(exercise.targetRegion)}</span>` : '<span></span>'}
+      <div class="target-pill-row">
+        ${(exercise.targetRegions || []).map((r) => `<span class="target-pill"><span class="dot" style="--pill-color:${r.color}"></span>${escapeHtml(r.name)}</span>`).join('')}
+      </div>
       ${exercise.videoUrl ? '<button type="button" class="video-toggle-btn">▶ Hareketi Gör</button>' : ''}
     </div>
     ${exercise.videoUrl ? `

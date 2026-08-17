@@ -33,7 +33,7 @@ export function renderLibraryList(container, { title, store, placeholder, backHr
         </div>
         <div class="list-item-actions">
           ${showDurationToggle ? `<button type="button" class="btn-icon duration-toggle-btn${item.isDuration ? ' active' : ''}" aria-label="Süre-bazlı egzersiz" title="Süre-bazlı egzersiz">⏱</button>` : ''}
-          ${showMediaEditor ? `<button type="button" class="btn-icon media-btn${(item.videoUrl || item.targetRegion) ? ' active' : ''}" aria-label="Video ve hedef bölge" title="Video ve hedef bölge">${ICON_MEDIA}</button>` : ''}
+          ${showMediaEditor ? `<button type="button" class="btn-icon media-btn${(item.videoUrl || item.targetRegions?.length) ? ' active' : ''}" aria-label="Video ve hedef bölge" title="Video ve hedef bölge">${ICON_MEDIA}</button>` : ''}
           <button type="button" class="btn-icon edit-btn" aria-label="Düzenle">✎</button>
           <button type="button" class="btn-icon danger delete-btn" aria-label="Sil">${ICON_TRASH}</button>
         </div>
@@ -96,35 +96,48 @@ export function renderLibraryList(container, { title, store, placeholder, backHr
   });
 
   function openMediaSheet(item) {
+    const selectedNames = new Set((item.targetRegions || []).map((r) => r.name));
+    if (item.targetRegion) selectedNames.add(item.targetRegion); // eski tekil alan, göç
+
     const backdrop = document.createElement('div');
     backdrop.className = 'sheet-backdrop';
     backdrop.innerHTML = `
       <div class="sheet">
         <div class="sheet-title">${escapeHtml(item.name)}</div>
-        <div class="sheet-sub">Video linki ve hedef bölge ekle</div>
+        <div class="sheet-sub">Video linki ve hedef bölge(ler) ekle</div>
         <div class="field">
           <label>Video linki</label>
           <input type="text" id="media-url" placeholder="https://..." value="${escapeHtml(item.videoUrl || '')}">
         </div>
         <div class="field" style="margin-bottom:0;">
-          <label>Hedef bölge</label>
-          <select id="media-region">
-            <option value="">Seçilmedi</option>
-            ${EXERCISE_REGIONS.map((r) => `<option value="${escapeHtml(r.name)}"${item.targetRegion === r.name ? ' selected' : ''}>${escapeHtml(r.name)}</option>`).join('')}
-          </select>
+          <label>Hedef bölge (birden fazla seçebilirsin)</label>
+          <div class="region-grid" id="media-region-grid">
+            ${EXERCISE_REGIONS.map((r) => (
+              `<button type="button" class="region-chip${selectedNames.has(r.name) ? ' selected' : ''}" data-name="${escapeHtml(r.name)}" data-color="${r.color}">${escapeHtml(r.name)}</button>`
+            )).join('')}
+          </div>
         </div>
         <button type="button" class="btn btn-primary btn-block" id="media-save">Kaydet</button>
       </div>
     `;
     document.body.appendChild(backdrop);
 
+    backdrop.querySelectorAll('.region-chip').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        chip.classList.toggle('selected');
+      });
+    });
+
     function close() { backdrop.remove(); }
     backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
 
     backdrop.querySelector('#media-save').addEventListener('click', () => {
       const videoUrl = backdrop.querySelector('#media-url').value.trim();
-      const targetRegion = backdrop.querySelector('#media-region').value;
-      store.setMedia(item.id, { videoUrl, targetRegion });
+      const targetRegions = [...backdrop.querySelectorAll('.region-chip.selected')].map((chip) => ({
+        name: chip.dataset.name,
+        color: chip.dataset.color,
+      }));
+      store.setMedia(item.id, { videoUrl, targetRegions });
       close();
       renderItems();
     });
