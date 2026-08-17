@@ -404,6 +404,20 @@ input:focus, select:focus, textarea:focus {
   min-width: 0;
 }
 
+.region-row-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.region-color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--dot-color, var(--border-strong));
+  flex-shrink: 0;
+}
+
 .list-item-main input[type="text"] {
   padding: 8px 10px;
 }
@@ -719,29 +733,67 @@ a.list-item {
 
 .exercise-media-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-2);
   margin-bottom: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.target-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
 }
 
 .target-pill {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   font-size: 12px;
   font-weight: 600;
   color: var(--text-muted);
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 999px;
-  padding: 4px 10px 4px 7px;
+  padding: 4px 10px 4px 8px;
 }
 
-.target-pill svg {
-  width: 13px;
-  height: 13px;
+.target-pill .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--pill-color, var(--border-strong));
   flex-shrink: 0;
+}
+
+/* Çoklu-seçim bölge ızgarası — exerciseCatalog.js ve libraryList.js'in ortak
+   sheet'lerinde kullanılıyor, tek renkli hedef bölge kaldırıldı. */
+.region-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.region-chip {
+  appearance: none;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 999px;
+  padding: 7px 13px;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.region-chip.selected {
+  background: rgba(201, 161, 90, 0.16);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 .note-toggle,

@@ -1,7 +1,8 @@
-import { escapeHtml, ICON_TRASH, ICON_MEDIA, EXERCISE_REGIONS } from '../util.js';
+import { escapeHtml, ICON_TRASH, ICON_MEDIA } from '../util.js';
 import { confirmSheet } from '../components/confirmSheet.js';
 import {
   listCatalog, addCatalogExercise, renameCatalogExercise, setCatalogDuration, setCatalogMedia, archiveCatalogExercise,
+  listRegions,
 } from './adminCloud.js';
 
 // libraryList.js'in aynı görsel/etkileşim dili — sadece veri kaynağı yerel
@@ -31,8 +32,9 @@ export async function render(container, { onBack }) {
   const searchHint = container.querySelector('#search-hint');
 
   let items = [];
+  let regions = [];
   try {
-    items = await listCatalog();
+    [items, regions] = await Promise.all([listCatalog(), listRegions()]);
   } catch (err) {
     console.error('Katalog yüklenemedi', err);
     listRoot.innerHTML = '<p class="empty-state">Katalog yüklenemedi, internet bağlantını kontrol edip tekrar dene.</p>';
@@ -52,7 +54,7 @@ export async function render(container, { onBack }) {
           </div>
           <div class="list-item-actions">
             <button type="button" class="btn-icon duration-toggle-btn${item.isDuration ? ' active' : ''}" aria-label="Süre-bazlı egzersiz" title="Süre-bazlı egzersiz">⏱</button>
-            <button type="button" class="btn-icon media-btn${(item.videoUrl || item.targetRegion) ? ' active' : ''}" aria-label="Video ve hedef bölge" title="Video ve hedef bölge">${ICON_MEDIA}</button>
+            <button type="button" class="btn-icon media-btn${(item.videoUrl || item.targetRegions?.length) ? ' active' : ''}" aria-label="Video ve hedef bölge" title="Video ve hedef bölge">${ICON_MEDIA}</button>
             <button type="button" class="btn-icon edit-btn" aria-label="Düzenle">✎</button>
             <button type="button" class="btn-icon danger delete-btn" aria-label="Sil">${ICON_TRASH}</button>
           </div>
@@ -134,7 +136,7 @@ export async function render(container, { onBack }) {
     addInput.focus();
     try {
       const id = await addCatalogExercise(name);
-      items.push({ id, name, videoUrl: '', targetRegion: '', isDuration: false, archived: false });
+      items.push({ id, name, videoUrl: '', targetRegions: [], isDuration: false, archived: false });
       renderItems();
     } catch (err) {
       console.error('Egzersiz eklenemedi', err);
@@ -194,41 +196,59 @@ export async function render(container, { onBack }) {
   });
 
   function openMediaSheet(item) {
+    // targetRegions dizisindeki isimleri kataloğun GÜNCEL region listesiyle eşleştir
+    // (id saklamıyoruz, isim üzerinden — bkz. dosya başı notu). Ayrıca eski tekil
+    // `targetRegion` alanından (bu özellik çoklu-seçime geçmeden önceki veri) da
+    // aynı şekilde tek bir ön-seçim türetiyoruz, ilk kez göç ederken kaybolmasın.
+    const selectedNames = new Set((item.targetRegions || []).map((r) => r.name));
+    if (item.targetRegion) selectedNames.add(item.targetRegion);
+    const selectedIds = new Set(regions.filter((r) => selectedNames.has(r.name)).map((r) => r.id));
+
     const backdrop = document.createElement('div');
     backdrop.className = 'sheet-backdrop';
     backdrop.innerHTML = `
       <div class="sheet">
         <div class="sheet-title">${escapeHtml(item.name)}</div>
-        <div class="sheet-sub">Video linki ve hedef bölge ekle</div>
+        <div class="sheet-sub">Video linki ve hedef bölge(ler) ekle</div>
         <div class="field">
           <label>Video linki</label>
           <input type="text" id="media-url" placeholder="https://..." value="${escapeHtml(item.videoUrl || '')}">
         </div>
         <div class="field" style="margin-bottom:0;">
-          <label>Hedef bölge</label>
-          <select id="media-region">
-            <option value="">Seçilmedi</option>
-            ${EXERCISE_REGIONS.map((r) => `<option value="${escapeHtml(r.name)}"${item.targetRegion === r.name ? ' selected' : ''}>${escapeHtml(r.name)}</option>`).join('')}
-          </select>
+          <label>Hedef bölge (birden fazla seçebilirsin)</label>
+          <div class="region-grid" id="media-region-grid">
+            ${regions.length ? regions.map((r) => (
+              `<button type="button" class="region-chip${selectedIds.has(r.id) ? ' selected' : ''}" data-id="${r.id}">${escapeHtml(r.name)}</button>`
+            )).join('') : '<p class="empty-state">Henüz bölge eklenmedi, önce Hedef Bölgeler ekranından ekle.</p>'}
+          </div>
         </div>
         <button type="button" class="btn btn-primary btn-block" id="media-save">Kaydet</button>
       </div>
     `;
     document.body.appendChild(backdrop);
 
+    backdrop.querySelectorAll('.region-chip').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        chip.classList.toggle('selected');
+      });
+    });
+
     function close() { backdrop.remove(); }
     backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
 
     backdrop.querySelector('#media-save').addEventListener('click', async () => {
       const videoUrl = backdrop.querySelector('#media-url').value.trim();
-      const targetRegion = backdrop.querySelector('#media-region').value;
+      const targetRegions = [...backdrop.querySelectorAll('.region-chip.selected')].map((chip) => {
+        const region = regions.find((r) => r.id === chip.dataset.id);
+        return { name: region.name, color: region.color };
+      });
       const saveBtn = backdrop.querySelector('#media-save');
       saveBtn.disabled = true;
       saveBtn.textContent = 'Kaydediliyor…';
       try {
-        await setCatalogMedia(item.id, { videoUrl, targetRegion });
+        await setCatalogMedia(item.id, { videoUrl, targetRegions });
         item.videoUrl = videoUrl;
-        item.targetRegion = targetRegion;
+        item.targetRegions = targetRegions;
         close();
         renderItems();
       } catch (err) {

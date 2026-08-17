@@ -592,7 +592,7 @@ function resolveLocalExercise(state, catalogEx) {
   exercise.name = catalogEx.name;
   exercise.isDuration = !!catalogEx.isDuration;
   exercise.videoUrl = catalogEx.videoUrl || '';
-  exercise.targetRegion = catalogEx.targetRegion || '';
+  exercise.targetRegions = catalogEx.targetRegions || [];
   return exercise;
 }
 

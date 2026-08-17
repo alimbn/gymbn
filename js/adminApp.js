@@ -2,6 +2,7 @@ import { onAdminAuthReady, adminLogin, adminSignOut, adminResetPassword, isCurre
 import { renderLoginForm } from './shared/loginForm.js';
 import * as coachRoster from './admin/coachRoster.js';
 import * as exerciseCatalog from './admin/exerciseCatalog.js';
+import * as targetRegions from './admin/targetRegions.js';
 
 const viewRoot = document.getElementById('view-root');
 
@@ -69,6 +70,7 @@ function showRoster() {
     </div>
     <div class="more-menu">
       <a href="#" class="more-menu-item" id="catalog-nav-link"><span>Egzersiz Kütüphanesi</span><span class="chevron">›</span></a>
+      <a href="#" class="more-menu-item" id="regions-nav-link"><span>Hedef Bölgeler</span><span class="chevron">›</span></a>
     </div>
     <div id="admin-body"></div>
   `;
@@ -77,9 +79,17 @@ function showRoster() {
     e.preventDefault();
     showCatalog();
   });
+  viewRoot.querySelector('#regions-nav-link').addEventListener('click', (e) => {
+    e.preventDefault();
+    showRegions();
+  });
   coachRoster.render(viewRoot.querySelector('#admin-body'));
 }
 
 function showCatalog() {
   exerciseCatalog.render(viewRoot, { onBack: showRoster });
+}
+
+function showRegions() {
+  targetRegions.render(viewRoot, { onBack: showRoster });
 }

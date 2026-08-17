@@ -72,7 +72,7 @@ export async function addCatalogExercise(name, isDuration = false) {
   await setDoc(doc(db, 'exerciseCatalog', id), {
     name: name.trim(),
     videoUrl: '',
-    targetRegion: '',
+    targetRegions: [],
     isDuration: !!isDuration,
     archived: false,
     createdAt: serverTimestamp(),
@@ -88,10 +88,49 @@ export async function setCatalogDuration(id, isDuration) {
   await setDoc(doc(db, 'exerciseCatalog', id), { isDuration: !!isDuration }, { merge: true });
 }
 
-export async function setCatalogMedia(id, { videoUrl, targetRegion }) {
-  await setDoc(doc(db, 'exerciseCatalog', id), { videoUrl: videoUrl || '', targetRegion: targetRegion || '' }, { merge: true });
+// targetRegions: [{name, color}] — regions koleksiyonundan seçilenlerin O ANKİ
+// isim/renginin kopyası (bkz. dosya sonu). dayEntry.js hiçbir zaman regions
+// koleksiyonuna bakmıyor, sadece bu kopyayı okuyor.
+export async function setCatalogMedia(id, { videoUrl, targetRegions }) {
+  await setDoc(doc(db, 'exerciseCatalog', id), { videoUrl: videoUrl || '', targetRegions: targetRegions || [] }, { merge: true });
 }
 
 export async function archiveCatalogExercise(id) {
   await setDoc(doc(db, 'exerciseCatalog', id), { archived: true }, { merge: true });
+}
+
+// ---- targetRegions: hedef bölge kataloğu, sadece admin (bkz. firestore.rules).
+// Renk elle seçilmiyor — oluşturma sırasındaki kayıt sayısına göre sabit bir
+// paletten otomatik atanıyor, tek amacı kartlarda görsel ayrım sağlamak. ----
+
+const REGION_COLOR_PALETTE = [
+  '#b56b5c', '#5c8f7a', '#c9a15a', '#6b84a8', '#8a6a9c',
+  '#b58a5c', '#6f8a8f', '#8b8f98', '#a3684f', '#4f7a6b',
+];
+
+export async function listRegions() {
+  const snap = await getDocs(collection(db, 'targetRegions'));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((r) => !r.archived).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+}
+
+export async function addRegion(name) {
+  const existing = await listRegions();
+  const id = crypto.randomUUID();
+  const color = REGION_COLOR_PALETTE[existing.length % REGION_COLOR_PALETTE.length];
+  await setDoc(doc(db, 'targetRegions', id), {
+    name: name.trim(),
+    color,
+    order: existing.length,
+    archived: false,
+    createdAt: serverTimestamp(),
+  });
+  return { id, color };
+}
+
+export async function renameRegion(id, name) {
+  await setDoc(doc(db, 'targetRegions', id), { name: name.trim() }, { merge: true });
+}
+
+export async function archiveRegion(id) {
+  await setDoc(doc(db, 'targetRegions', id), { archived: true }, { merge: true });
 }

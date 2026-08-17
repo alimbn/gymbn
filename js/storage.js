@@ -128,11 +128,12 @@ export const exercises = {
     item.isDuration = isDuration;
     saveState(false);
   },
-  setMedia: (id, { videoUrl, targetRegion }) => {
+  setMedia: (id, { videoUrl, targetRegions }) => {
     const item = libraryItemById('exercises', id);
     if (!item) return;
     item.videoUrl = videoUrl || '';
-    item.targetRegion = targetRegion || '';
+    item.targetRegions = targetRegions || [];
+    delete item.targetRegion;
     saveState(false);
   },
   active: () => activeLibraryItems('exercises'),

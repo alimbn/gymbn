@@ -97,26 +97,28 @@ export function vibrate(pattern) {
 export const ICON_TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h16M9 6V4h6v2M6 6l1 14h10l1-14"/></svg>';
 export const ICON_NOTE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 11.5a8.4 8.4 0 0 1-8.9 8.4 9 9 0 0 1-3.6-.7L3 20l1-4.7a8.3 8.3 0 0 1-.9-3.8A8.4 8.4 0 0 1 12 3a8.3 8.3 0 0 1 9 8.5Z"/></svg>';
 export const ICON_COACH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l18-7-7 18-3-8-8-3Z"/></svg>';
-export const ICON_DUMBBELL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6.5 9v6M4 10.5v3M17.5 9v6M20 10.5v3M6.5 12h11"/></svg>';
 export const ICON_MEDIA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M10 8.5l6 3.5-6 3.5v-7Z" fill="currentColor" stroke="none"/></svg>';
 
-// Egzersiz hedef bölgeleri: sabit liste (serbest metin değil), rengi de burada
-// tanımlı — hem kütüphanedeki seçim kutusu hem dayEntry.js'teki kenar çizgisi
-// aynı listeyi kullanıyor, tek yerden değişir.
+// Egzersiz hedef bölgeleri: kişisel kütüphanenin (libraryList.js) kullandığı
+// SABİT liste — Firestore'suz, tek cihazda çalışır. Admin'in ortak kataloğu
+// (exerciseCatalog.js) bunu KULLANMIYOR, kendi dinamik `targetRegions`
+// koleksiyonuna sahip (bkz. adminCloud.js) — ikisi kasıtlı olarak ayrı.
 export const EXERCISE_REGIONS = [
   { name: 'Göğüs', color: '#b56b5c' },
   { name: 'Sırt', color: '#5c8f7a' },
-  { name: 'Omuz', color: '#c9a15a' },
-  { name: 'Kol', color: '#6b84a8' },
-  { name: 'Bacak', color: '#8a6a9c' },
+  { name: 'Ön Omuz', color: '#c9a15a' },
+  { name: 'Yan Omuz', color: '#c9a15a' },
+  { name: 'Arka Omuz', color: '#c9a15a' },
+  { name: 'Biceps', color: '#6b84a8' },
+  { name: 'Triceps', color: '#6b84a8' },
+  { name: 'Ön Kol', color: '#6b84a8' },
+  { name: 'Ön Bacak', color: '#8a6a9c' },
+  { name: 'Arka Bacak', color: '#8a6a9c' },
+  { name: 'Baldır', color: '#8a6a9c' },
   { name: 'Kalça', color: '#b58a5c' },
   { name: 'Karın', color: '#6f8a8f' },
   { name: 'Tüm Vücut', color: '#8b8f98' },
 ];
-
-export function regionColor(name) {
-  return EXERCISE_REGIONS.find((r) => r.name === name)?.color || null;
-}
 
 const YOUTUBE_ID_RE = /(?:youtube\.com\/watch\?v=|youtube\.com\/embed\/|youtube\.com\/shorts\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
 
