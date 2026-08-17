@@ -112,7 +112,7 @@ export function renderLibraryList(container, { title, store, placeholder, backHr
         <div class="field" style="margin-bottom:0;">
           <label>Hedef bölge (birden fazla seçebilirsin)</label>
           <div class="region-grid" id="media-region-grid">
-            ${EXERCISE_REGIONS.map((r) => (
+            ${[...EXERCISE_REGIONS].sort((a, b) => a.name.localeCompare(b.name, 'tr')).map((r) => (
               `<button type="button" class="region-chip${selectedNames.has(r.name) ? ' selected' : ''}" data-name="${escapeHtml(r.name)}" data-color="${r.color}">${escapeHtml(r.name)}</button>`
             )).join('')}
           </div>

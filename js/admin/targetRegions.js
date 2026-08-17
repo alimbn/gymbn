@@ -41,6 +41,7 @@ export async function render(container, { onBack }) {
     if (!items.length) {
       listRoot.innerHTML = '<p class="empty-state">Henüz eklenmedi.</p>';
     } else {
+      items.sort((a, b) => a.name.localeCompare(b.name, 'tr'));
       listRoot.innerHTML = items.map((item) => `
         <div class="list-item" data-id="${item.id}">
           <div class="list-item-main region-row-main">
