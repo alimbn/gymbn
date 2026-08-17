@@ -92,5 +92,13 @@ service cloud.firestore {
         && request.resource.data.displayName == resource.data.displayName;
       allow delete: if isCoach() && resource.data.coachId == request.auth.uid;
     }
+
+    // ---- exerciseCatalog: tüm hocalar+öğrenciler arasında paylaşılan tek egzersiz
+    // listesi (video linki + hedef bölge). Hoca sadece OKUR (program atarken seçim
+    // listesi için) — yeni kayıt/düzenleme/silme YALNIZCA admin'de, hoca hiç yazamaz. ----
+    match /exerciseCatalog/{exerciseId} {
+      allow get, list: if isCoach() || isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
   }
 }
