@@ -1,6 +1,7 @@
 import { onAdminAuthReady, adminLogin, adminSignOut, adminResetPassword, isCurrentUserAdmin } from './admin/adminCloud.js';
 import { renderLoginForm } from './shared/loginForm.js';
 import * as coachRoster from './admin/coachRoster.js';
+import * as exerciseCatalog from './admin/exerciseCatalog.js';
 
 const viewRoot = document.getElementById('view-root');
 
@@ -57,13 +58,28 @@ function renderAccessDenied() {
 
 function renderAdminShell() {
   document.body.classList.remove('auth-gate');
+  showRoster();
+}
+
+function showRoster() {
   viewRoot.innerHTML = `
     <div class="view-header">
       <h2 class="view-title">Hocalar</h2>
       <button type="button" class="btn btn-ghost" id="admin-signout-btn">Çıkış</button>
     </div>
+    <div class="more-menu">
+      <a href="#" class="more-menu-item" id="catalog-nav-link"><span>Egzersiz Kütüphanesi</span><span class="chevron">›</span></a>
+    </div>
     <div id="admin-body"></div>
   `;
   viewRoot.querySelector('#admin-signout-btn').addEventListener('click', () => adminSignOut());
+  viewRoot.querySelector('#catalog-nav-link').addEventListener('click', (e) => {
+    e.preventDefault();
+    showCatalog();
+  });
   coachRoster.render(viewRoot.querySelector('#admin-body'));
+}
+
+function showCatalog() {
+  exerciseCatalog.render(viewRoot, { onBack: showRoster });
 }

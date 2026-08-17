@@ -1,6 +1,6 @@
 import { normalizeForMatch, addDaysIso, mondayOfWeek, todayIso, escapeHtml } from '../util.js';
 import { parseWeeklyProgramText } from '../bulkParse.js';
-import { getStudent, getStudentAppState, setStudentAppState } from './coachCloud.js';
+import { getStudent, getStudentAppState, setStudentAppState, listCatalog } from './coachCloud.js';
 import { confirmSheet } from '../components/confirmSheet.js';
 
 // bulkAdd.js'in AYNI yapıştır→ayrıştır→düzenlenebilir önizleme→onayla akışı,
@@ -23,7 +23,6 @@ function emptyState() {
 }
 
 function activeDayTypes(state) { return state.dayTypes.filter((d) => !d.archived); }
-function activeExercises(state) { return state.exercises.filter((e) => !e.archived); }
 function findDayEntryByDate(state, dateIso) { return state.dayEntries.find((d) => d.date === dateIso) || null; }
 function suggestNextDayNumber(state) {
   if (!state.dayEntries.length) return null;
@@ -32,11 +31,6 @@ function suggestNextDayNumber(state) {
 function addDayType(state, name) {
   const item = { id: uid('dt'), name: name.trim(), archived: false };
   state.dayTypes.push(item);
-  return item;
-}
-function addExercise(state, name, isDuration) {
-  const item = { id: uid('ex'), name: name.trim(), archived: false, isDuration: !!isDuration };
-  state.exercises.push(item);
   return item;
 }
 function createDayEntry(state, { date, dayNumber, dayTypeId }) {
@@ -231,8 +225,9 @@ export async function render(container, { studentUid }) {
 
   let student;
   let remoteState;
+  let catalog;
   try {
-    [student, remoteState] = await Promise.all([getStudent(studentUid), getStudentAppState(studentUid)]);
+    [student, remoteState, catalog] = await Promise.all([getStudent(studentUid), getStudentAppState(studentUid), listCatalog()]);
   } catch (err) {
     console.error('Öğrenci verisi yüklenemedi', err);
     renderErrorScreen(container, studentUid, 'Öğrenci verisi yüklenemedi, internet bağlantını kontrol edip tekrar dene.');
@@ -242,10 +237,14 @@ export async function render(container, { studentUid }) {
     renderErrorScreen(container, studentUid, 'Öğrenci bulunamadı.');
     return;
   }
+  if (!catalog.length) {
+    renderErrorScreen(container, studentUid, 'Egzersiz kütüphanesi henüz boş. Önce admin ekranından en az bir egzersiz eklenmeli.');
+    return;
+  }
 
   const state = remoteState || emptyState();
   const monday = mondayOfWeek(todayIso());
-  renderPasteScreen(container, student, state, monday);
+  renderPasteScreen(container, student, state, monday, catalog);
 }
 
 function renderLoadingScreen(container) {
@@ -263,7 +262,7 @@ function renderErrorScreen(container, studentUid, message) {
   `;
 }
 
-function renderPasteScreen(container, student, state, monday) {
+function renderPasteScreen(container, student, state, monday, catalog) {
   container.innerHTML = `
     <div class="view-header">
       <a href="#/student/${student.id}" class="back-link" aria-label="Geri">←</a>
@@ -286,21 +285,26 @@ Barfiks 3 set 5-6 tekrar
     const text = container.querySelector('#paste-textarea').value;
     if (!text.trim()) return;
     const blocks = assignDefaultDates(
-      parseWeeklyProgramText(text).map((b) => enrichBlock(b, state)),
+      parseWeeklyProgramText(text).map((b) => enrichBlock(b, state, catalog)),
       state, monday,
     );
-    renderReviewScreen(container, student, state, monday, blocks);
+    renderReviewScreen(container, student, state, monday, blocks, catalog);
   });
 }
 
-function enrichBlock(block, state) {
+function enrichBlock(block, state, catalog) {
   const normalized = normalizeForMatch(block.dayTypeRaw);
   const matched = activeDayTypes(state).find((dt) => normalizeForMatch(dt.name) === normalized);
   return {
     dayTypeRaw: block.dayTypeRaw,
     dayTypeId: matched ? matched.id : null,
     assignedDate: null,
-    exercises: block.exercises.map((ex) => ({ ...ex })),
+    exercises: block.exercises.map((ex) => {
+      const parsedName = ex.name;
+      const normalizedName = normalizeForMatch(parsedName);
+      const match = catalog.find((c) => normalizeForMatch(c.name) === normalizedName);
+      return { ...ex, parsedName, catalogId: match ? match.id : null };
+    }),
   };
 }
 
@@ -323,7 +327,7 @@ function describeExistingEntry(state, dateIso) {
   return `Bu günde zaten kayıt var: ${parts.join(' · ')}. Yeni egzersizler bunun üzerine eklenecek.`;
 }
 
-function renderReviewScreen(container, student, state, monday, blocks) {
+function renderReviewScreen(container, student, state, monday, blocks, catalog) {
   container.innerHTML = `
     <div class="view-header">
       <button type="button" class="back-link" id="back-to-paste-btn" aria-label="Geri">←</button>
@@ -331,20 +335,26 @@ function renderReviewScreen(container, student, state, monday, blocks) {
       <span></span>
     </div>
     <p class="muted bulk-intro">Öğrenci: <strong>${escapeHtml(student.displayName)}</strong></p>
-    <p class="muted bulk-intro">${blocks.length} gün bulundu. Yanlış ayrıştırılan bir alan varsa düzelt, sonra onayla.</p>
+    <p class="muted bulk-intro">${blocks.length} gün bulundu. Kırmızı çerçeveli egzersizler kataloğa eşleşmedi, kendin seç. Yanlış ayrıştırılan başka bir alan varsa düzelt, sonra onayla.</p>
     <div id="blocks-root"></div>
     <button type="button" class="btn btn-primary btn-block" id="confirm-btn">Onayla ve Ata</button>
   `;
 
   container.querySelector('#back-to-paste-btn').addEventListener('click', () => {
-    renderPasteScreen(container, student, state, monday);
+    renderPasteScreen(container, student, state, monday, catalog);
   });
 
   const blocksRoot = container.querySelector('#blocks-root');
-  blocks.forEach((block) => blocksRoot.appendChild(buildBlockCard(block, state)));
+  blocks.forEach((block) => blocksRoot.appendChild(buildBlockCard(block, state, catalog)));
 
   const confirmBtn = container.querySelector('#confirm-btn');
   confirmBtn.addEventListener('click', async () => {
+    const unresolved = blocksRoot.querySelector('.bulk-ex-name-select.unresolved');
+    if (unresolved) {
+      unresolved.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      unresolved.focus();
+      return;
+    }
     const skipped = blocks.filter((b) => !b.assignedDate).length;
     if (skipped && !(await confirmSheet(`${skipped} gün tarihe atanmadığı için eklenmeyecek. Devam edilsin mi?`, { confirmLabel: 'Devam Et', danger: false }))) {
       return;
@@ -352,7 +362,7 @@ function renderReviewScreen(container, student, state, monday, blocks) {
     confirmBtn.disabled = true;
     confirmBtn.textContent = 'Kaydediliyor…';
     try {
-      commitBlocks(state, blocks);
+      commitBlocks(state, blocks, catalog);
       await setStudentAppState(student.id, state);
       location.hash = '#/';
     } catch (err) {
@@ -364,7 +374,7 @@ function renderReviewScreen(container, student, state, monday, blocks) {
   });
 }
 
-function buildBlockCard(block, state) {
+function buildBlockCard(block, state, catalog) {
   const card = document.createElement('div');
   card.className = 'card bulk-block-card';
 
@@ -407,18 +417,28 @@ function buildBlockCard(block, state) {
 
   const exList = card.querySelector('.block-exercise-list');
   block.exercises.forEach((ex) => {
-    exList.appendChild(buildExerciseRow(ex, block, exList));
+    exList.appendChild(buildExerciseRow(ex, block, exList, catalog));
   });
 
   return card;
 }
 
-function buildExerciseRow(ex, block, exList) {
+function buildExerciseRow(ex, block, exList, catalog) {
   const row = document.createElement('div');
   row.className = 'bulk-exercise-row';
+  const sortedCatalog = [...catalog].sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+  const options = sortedCatalog.map((c) => (
+    `<option value="${c.id}"${ex.catalogId === c.id ? ' selected' : ''}>${escapeHtml(c.name)}</option>`
+  )).join('');
   row.innerHTML = `
     <div class="bulk-exercise-row-top">
-      <input type="text" class="bulk-ex-name" value="${escapeHtml(ex.name)}" placeholder="Egzersiz adı">
+      <div class="bulk-ex-name-wrap">
+        <select class="bulk-ex-name-select${ex.catalogId ? '' : ' unresolved'}">
+          <option value="">— eşleşme yok, seç —</option>
+          ${options}
+        </select>
+        ${ex.catalogId ? '' : `<div class="bulk-ex-parsed-hint">Yapıştırılan: "${escapeHtml(ex.parsedName || '')}"</div>`}
+      </div>
       <button type="button" class="btn-icon danger bulk-ex-remove" aria-label="Satırı sil">×</button>
     </div>
     <div class="bulk-exercise-row-fields">
@@ -442,8 +462,14 @@ function buildExerciseRow(ex, block, exList) {
     <input type="text" class="bulk-ex-note" value="${escapeHtml(ex.coachNote)}" placeholder="Hoca notu (opsiyonel)">
   `;
 
-  row.querySelector('.bulk-ex-name').addEventListener('input', (e) => {
-    ex.name = e.target.value;
+  const nameSelect = row.querySelector('.bulk-ex-name-select');
+  nameSelect.addEventListener('change', (e) => {
+    const catalogEx = catalog.find((c) => c.id === e.target.value);
+    ex.catalogId = catalogEx ? catalogEx.id : null;
+    ex.name = catalogEx ? catalogEx.name : '';
+    nameSelect.classList.toggle('unresolved', !ex.catalogId);
+    const hint = row.querySelector('.bulk-ex-parsed-hint');
+    if (hint) hint.style.display = ex.catalogId ? 'none' : '';
   });
 
   row.querySelector('.bulk-ex-field[data-field="weight"]').addEventListener('input', (e) => {
@@ -503,7 +529,26 @@ function buildExerciseRow(ex, block, exList) {
   return row;
 }
 
-function commitBlocks(state, blocks) {
+// Egzersiz kimliği artık ortak katalogdan geliyor (Önizleme ekranındaki dropdown'da
+// eşleştirildi) — burada sadece o kataloğun O ANKİ video/hedef bölge/isim verisini
+// öğrencinin kendi state.exercises'ına kopyalıyoruz (sourceCatalogId ile işaretli).
+// Öğrencinin kendi uygulaması (dayEntry.js) hâlâ sadece kendi yerel listesine bakıyor,
+// hiç değişmedi — admin kataloğu sonradan güncellerse, hocanın bir sonraki atamasında
+// (aynı sourceCatalogId üzerinden) taze veri tekrar kopyalanıyor.
+function resolveLocalExercise(state, catalogEx) {
+  let exercise = state.exercises.find((e) => e.sourceCatalogId === catalogEx.id);
+  if (!exercise) {
+    exercise = { id: uid('ex'), archived: false, sourceCatalogId: catalogEx.id };
+    state.exercises.push(exercise);
+  }
+  exercise.name = catalogEx.name;
+  exercise.isDuration = !!catalogEx.isDuration;
+  exercise.videoUrl = catalogEx.videoUrl || '';
+  exercise.targetRegion = catalogEx.targetRegion || '';
+  return exercise;
+}
+
+function commitBlocks(state, blocks, catalog) {
   for (const block of blocks) {
     if (!block.assignedDate) continue;
 
@@ -520,10 +565,10 @@ function commitBlocks(state, blocks) {
     }
 
     for (const ex of block.exercises) {
-      if (!ex.name) continue;
-      const normalized = normalizeForMatch(ex.name);
-      let exercise = activeExercises(state).find((e) => normalizeForMatch(e.name) === normalized);
-      if (!exercise) exercise = addExercise(state, ex.name, ex.detectedDuration);
+      if (!ex.catalogId) continue;
+      const catalogEx = catalog.find((c) => c.id === ex.catalogId);
+      if (!catalogEx) continue;
+      const exercise = resolveLocalExercise(state, catalogEx);
       addExerciseInstanceWithPrescribed(
         state, entry.id, exercise.id,
         { weight: ex.weight, setCount: ex.setCount, reps: ex.reps, rir: ex.rir, coachNote: ex.coachNote },

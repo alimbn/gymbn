@@ -1,0 +1,206 @@
+import { escapeHtml, ICON_TRASH, ICON_MEDIA, EXERCISE_REGIONS } from '../util.js';
+import { confirmSheet } from '../components/confirmSheet.js';
+import {
+  listCatalog, addCatalogExercise, renameCatalogExercise, setCatalogDuration, setCatalogMedia, archiveCatalogExercise,
+} from './adminCloud.js';
+
+// libraryList.js'in aynı görsel/etkileşim dili — sadece veri kaynağı yerel
+// storage.js yerine ortak exerciseCatalog koleksiyonu (async Firestore).
+// Hoca'nın hiç yazamadığı tek yer burası; assignProgram.js sadece okuyor.
+export async function render(container, { onBack }) {
+  container.innerHTML = `
+    <div class="view-header">
+      <button type="button" class="back-link" id="catalog-back-btn" aria-label="Geri">←</button>
+      <h2 class="view-title">Egzersiz Kütüphanesi</h2>
+      <span></span>
+    </div>
+    <form class="add-form" id="add-form">
+      <input type="text" id="add-input" placeholder="Yeni egzersiz adı" autocomplete="off">
+      <button type="submit" class="btn btn-primary">Ekle</button>
+    </form>
+    <div class="list" id="list-root"><p class="empty-state">Yükleniyor…</p></div>
+  `;
+
+  container.querySelector('#catalog-back-btn').addEventListener('click', onBack);
+
+  const listRoot = container.querySelector('#list-root');
+  const addForm = container.querySelector('#add-form');
+  const addInput = container.querySelector('#add-input');
+
+  let items = [];
+  try {
+    items = await listCatalog();
+  } catch (err) {
+    console.error('Katalog yüklenemedi', err);
+    listRoot.innerHTML = '<p class="empty-state">Katalog yüklenemedi, internet bağlantını kontrol edip tekrar dene.</p>';
+    return;
+  }
+
+  function renderItems() {
+    if (!items.length) {
+      listRoot.innerHTML = '<p class="empty-state">Henüz eklenmedi.</p>';
+      return;
+    }
+    items.sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+    listRoot.innerHTML = items.map((item) => `
+      <div class="list-item" data-id="${item.id}">
+        <div class="list-item-main">
+          <span class="list-item-title view-mode">${escapeHtml(item.name)}</span>
+          <input type="text" class="edit-input" style="display:none" value="${escapeHtml(item.name)}">
+        </div>
+        <div class="list-item-actions">
+          <button type="button" class="btn-icon duration-toggle-btn${item.isDuration ? ' active' : ''}" aria-label="Süre-bazlı egzersiz" title="Süre-bazlı egzersiz">⏱</button>
+          <button type="button" class="btn-icon media-btn${(item.videoUrl || item.targetRegion) ? ' active' : ''}" aria-label="Video ve hedef bölge" title="Video ve hedef bölge">${ICON_MEDIA}</button>
+          <button type="button" class="btn-icon edit-btn" aria-label="Düzenle">✎</button>
+          <button type="button" class="btn-icon danger delete-btn" aria-label="Sil">${ICON_TRASH}</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function enterEdit(row) {
+    row.querySelector('.view-mode').style.display = 'none';
+    const input = row.querySelector('.edit-input');
+    input.style.display = '';
+    input.focus();
+    input.select();
+  }
+
+  async function exitEdit(row, save) {
+    const input = row.querySelector('.edit-input');
+    const viewSpan = row.querySelector('.view-mode');
+    if (save) {
+      const name = input.value.trim();
+      if (name) {
+        const item = items.find((it) => it.id === row.dataset.id);
+        item.name = name;
+        viewSpan.textContent = name;
+        try {
+          await renameCatalogExercise(row.dataset.id, name);
+        } catch (err) {
+          console.error('İsim güncellenemedi', err);
+        }
+      }
+    } else {
+      input.value = viewSpan.textContent;
+    }
+    input.style.display = 'none';
+    viewSpan.style.display = '';
+  }
+
+  addForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = addInput.value.trim();
+    if (!name) return;
+    addInput.value = '';
+    addInput.focus();
+    try {
+      const id = await addCatalogExercise(name);
+      items.push({ id, name, videoUrl: '', targetRegion: '', isDuration: false, archived: false });
+      renderItems();
+    } catch (err) {
+      console.error('Egzersiz eklenemedi', err);
+      alert('Egzersiz eklenemedi, internet bağlantını kontrol edip tekrar dene.');
+    }
+  });
+
+  listRoot.addEventListener('click', async (e) => {
+    const row = e.target.closest('.list-item');
+    if (!row) return;
+    const item = items.find((it) => it.id === row.dataset.id);
+    if (e.target.classList.contains('edit-btn')) {
+      enterEdit(row);
+    } else if (e.target.classList.contains('delete-btn')) {
+      const name = row.querySelector('.view-mode').textContent;
+      if (await confirmSheet(`"${name}" silinsin mi?`)) {
+        try {
+          await archiveCatalogExercise(item.id);
+          items = items.filter((it) => it.id !== item.id);
+          renderItems();
+        } catch (err) {
+          console.error('Egzersiz silinemedi', err);
+          alert('Egzersiz silinemedi, internet bağlantını kontrol edip tekrar dene.');
+        }
+      }
+    } else if (e.target.classList.contains('duration-toggle-btn')) {
+      item.isDuration = !item.isDuration;
+      renderItems();
+      try {
+        await setCatalogDuration(item.id, item.isDuration);
+      } catch (err) {
+        console.error('Süre-bazlı ayarı güncellenemedi', err);
+      }
+    } else if (e.target.closest('.media-btn')) {
+      openMediaSheet(item);
+    }
+  });
+
+  listRoot.addEventListener('keydown', (e) => {
+    if (!e.target.classList.contains('edit-input')) return;
+    const row = e.target.closest('.list-item');
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      exitEdit(row, true);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      exitEdit(row, false);
+    }
+  });
+
+  listRoot.addEventListener('focusout', (e) => {
+    if (!e.target.classList.contains('edit-input')) return;
+    const row = e.target.closest('.list-item');
+    if (row && row.querySelector('.edit-input').style.display !== 'none') {
+      exitEdit(row, true);
+    }
+  });
+
+  function openMediaSheet(item) {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'sheet-backdrop';
+    backdrop.innerHTML = `
+      <div class="sheet">
+        <div class="sheet-title">${escapeHtml(item.name)}</div>
+        <div class="sheet-sub">Video linki ve hedef bölge ekle</div>
+        <div class="field">
+          <label>Video linki</label>
+          <input type="text" id="media-url" placeholder="https://..." value="${escapeHtml(item.videoUrl || '')}">
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Hedef bölge</label>
+          <select id="media-region">
+            <option value="">Seçilmedi</option>
+            ${EXERCISE_REGIONS.map((r) => `<option value="${escapeHtml(r.name)}"${item.targetRegion === r.name ? ' selected' : ''}>${escapeHtml(r.name)}</option>`).join('')}
+          </select>
+        </div>
+        <button type="button" class="btn btn-primary btn-block" id="media-save">Kaydet</button>
+      </div>
+    `;
+    document.body.appendChild(backdrop);
+
+    function close() { backdrop.remove(); }
+    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+
+    backdrop.querySelector('#media-save').addEventListener('click', async () => {
+      const videoUrl = backdrop.querySelector('#media-url').value.trim();
+      const targetRegion = backdrop.querySelector('#media-region').value;
+      const saveBtn = backdrop.querySelector('#media-save');
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Kaydediliyor…';
+      try {
+        await setCatalogMedia(item.id, { videoUrl, targetRegion });
+        item.videoUrl = videoUrl;
+        item.targetRegion = targetRegion;
+        close();
+        renderItems();
+      } catch (err) {
+        console.error('Video/bölge kaydedilemedi', err);
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Kaydet';
+        alert('Kaydedilemedi, internet bağlantını kontrol edip tekrar dene.');
+      }
+    });
+  }
+
+  renderItems();
+}

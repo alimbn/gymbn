@@ -77,3 +77,10 @@ export async function getStudentAppState(studentUid) {
 export async function setStudentAppState(studentUid, state) {
   await setDoc(doc(db, 'users', studentUid, 'data', 'main'), { ...state, updatedAt: serverTimestamp() });
 }
+
+// Ortak egzersiz kataloğu — salt okunur (bkz. firestore.rules: hoca sadece get/list
+// yapabiliyor). Yazma/etiketleme sadece admin ekranından, adminCloud.js'te.
+export async function listCatalog() {
+  const snap = await getDocs(collection(db, 'exerciseCatalog'));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((e) => !e.archived);
+}

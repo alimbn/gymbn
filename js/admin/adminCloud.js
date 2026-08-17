@@ -57,3 +57,41 @@ export async function createCoachInvite(displayName) {
 export async function cancelCoachInvite(token) {
   await deleteDoc(doc(db, 'coachInvites', token));
 }
+
+// ---- exerciseCatalog: hocalar+öğrenciler arasında paylaşılan tek egzersiz listesi.
+// Sadece admin yazabiliyor (bkz. firestore.rules) — hoca sadece coachCloud.js'teki
+// salt-okunur listCatalog() kopyasıyla okuyor. ----
+
+export async function listCatalog() {
+  const snap = await getDocs(collection(db, 'exerciseCatalog'));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((e) => !e.archived);
+}
+
+export async function addCatalogExercise(name, isDuration = false) {
+  const id = crypto.randomUUID();
+  await setDoc(doc(db, 'exerciseCatalog', id), {
+    name: name.trim(),
+    videoUrl: '',
+    targetRegion: '',
+    isDuration: !!isDuration,
+    archived: false,
+    createdAt: serverTimestamp(),
+  });
+  return id;
+}
+
+export async function renameCatalogExercise(id, name) {
+  await setDoc(doc(db, 'exerciseCatalog', id), { name: name.trim() }, { merge: true });
+}
+
+export async function setCatalogDuration(id, isDuration) {
+  await setDoc(doc(db, 'exerciseCatalog', id), { isDuration: !!isDuration }, { merge: true });
+}
+
+export async function setCatalogMedia(id, { videoUrl, targetRegion }) {
+  await setDoc(doc(db, 'exerciseCatalog', id), { videoUrl: videoUrl || '', targetRegion: targetRegion || '' }, { merge: true });
+}
+
+export async function archiveCatalogExercise(id) {
+  await setDoc(doc(db, 'exerciseCatalog', id), { archived: true }, { merge: true });
+}

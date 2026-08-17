@@ -1692,9 +1692,25 @@ a.list-item {
   margin-bottom: var(--space-2);
 }
 
-.bulk-ex-name {
+.bulk-ex-name-wrap {
   flex: 1;
+  min-width: 0;
+}
+
+.bulk-ex-name-select {
+  width: 100%;
   font-weight: 600;
+}
+
+.bulk-ex-name-select.unresolved {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.bulk-ex-parsed-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 3px;
 }
 
 .bulk-exercise-row-fields {
