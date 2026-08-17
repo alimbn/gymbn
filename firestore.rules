@@ -100,5 +100,13 @@ service cloud.firestore {
       allow get, list: if isCoach() || isAdmin();
       allow create, update, delete: if isAdmin();
     }
+
+    // ---- targetRegions: hedef bölge listesi, tamamen admin'in yönettiği ayrı bir
+    // koleksiyon. Hoca'nın buna hiç erişimi yok — sadece admin, egzersiz kataloğunu
+    // etiketlerken kullanıyor (seçilen bölgeler {name,color} olarak kataloğa
+    // kopyalanıyor, dayEntry.js hiçbir zaman bu koleksiyona bakmıyor). ----
+    match /targetRegions/{regionId} {
+      allow get, list, create, update, delete: if isAdmin();
+    }
   }
 }
