@@ -110,7 +110,7 @@ const REGION_COLOR_PALETTE = [
 
 export async function listRegions() {
   const snap = await getDocs(collection(db, 'targetRegions'));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((r) => !r.archived).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((r) => !r.archived).sort((a, b) => a.name.localeCompare(b.name, 'tr'));
 }
 
 export async function addRegion(name) {
@@ -120,7 +120,6 @@ export async function addRegion(name) {
   await setDoc(doc(db, 'targetRegions', id), {
     name: name.trim(),
     color,
-    order: existing.length,
     archived: false,
     createdAt: serverTimestamp(),
   });
