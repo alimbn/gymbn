@@ -22,6 +22,44 @@ function emptyState() {
   return { schemaVersion: 1, updatedAt: 0, exercises: [], dayTypes: [], dayEntries: [], payments: [], measurements: [] };
 }
 
+// Kataloga TAM eşleşmeyen bir isim için "bunu mu demek istedin" önerisi —
+// düzenleme mesafesi (Levenshtein) küçükse (yazım hatası ihtimali yüksekse)
+// tek bir öneri gösteriyoruz, dropdown'ı baştan sona taramak zorunda kalmasın.
+function levenshtein(a, b) {
+  const m = a.length;
+  const n = b.length;
+  if (!m) return n;
+  if (!n) return m;
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
+function closestCatalogMatch(parsedName, catalog) {
+  const q = normalizeForMatch(parsedName);
+  if (!q) return null;
+  let best = null;
+  let bestDist = Infinity;
+  for (const c of catalog) {
+    const dist = levenshtein(q, normalizeForMatch(c.name));
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = c;
+    }
+  }
+  if (!best) return null;
+  const threshold = Math.max(2, Math.ceil(q.length * 0.3));
+  return bestDist <= threshold ? best : null;
+}
+
 function activeDayTypes(state) { return state.dayTypes.filter((d) => !d.archived); }
 function findDayEntryByDate(state, dateIso) { return state.dayEntries.find((d) => d.date === dateIso) || null; }
 function suggestNextDayNumber(state) {
@@ -430,14 +468,18 @@ function buildExerciseRow(ex, block, exList, catalog) {
   const options = sortedCatalog.map((c) => (
     `<option value="${c.id}"${ex.catalogId === c.id ? ' selected' : ''}>${escapeHtml(c.name)}</option>`
   )).join('');
+  const placeholderLabel = ex.catalogId
+    ? '— eşleşme yok, seç —'
+    : `"${ex.parsedName || ''}" — eşleşme yok, seç`;
+  const suggestion = ex.catalogId ? null : closestCatalogMatch(ex.parsedName, catalog);
   row.innerHTML = `
     <div class="bulk-exercise-row-top">
       <div class="bulk-ex-name-wrap">
         <select class="bulk-ex-name-select${ex.catalogId ? '' : ' unresolved'}">
-          <option value="">— eşleşme yok, seç —</option>
+          <option value="">${escapeHtml(placeholderLabel)}</option>
           ${options}
         </select>
-        ${ex.catalogId ? '' : `<div class="bulk-ex-parsed-hint">Yapıştırılan: "${escapeHtml(ex.parsedName || '')}"</div>`}
+        ${suggestion ? `<button type="button" class="bulk-ex-suggest-btn" data-suggest-id="${suggestion.id}">Bunu mu demek istedin: "${escapeHtml(suggestion.name)}"?</button>` : ''}
       </div>
       <button type="button" class="btn-icon danger bulk-ex-remove" aria-label="Satırı sil">×</button>
     </div>
@@ -463,14 +505,20 @@ function buildExerciseRow(ex, block, exList, catalog) {
   `;
 
   const nameSelect = row.querySelector('.bulk-ex-name-select');
-  nameSelect.addEventListener('change', (e) => {
-    const catalogEx = catalog.find((c) => c.id === e.target.value);
+  function resolveSelection(catalogId) {
+    const catalogEx = catalog.find((c) => c.id === catalogId);
     ex.catalogId = catalogEx ? catalogEx.id : null;
     ex.name = catalogEx ? catalogEx.name : '';
+    nameSelect.value = ex.catalogId || '';
     nameSelect.classList.toggle('unresolved', !ex.catalogId);
-    const hint = row.querySelector('.bulk-ex-parsed-hint');
-    if (hint) hint.style.display = ex.catalogId ? 'none' : '';
-  });
+    const suggestBtn = row.querySelector('.bulk-ex-suggest-btn');
+    if (suggestBtn) suggestBtn.style.display = ex.catalogId ? 'none' : '';
+  }
+  nameSelect.addEventListener('change', (e) => resolveSelection(e.target.value));
+  const suggestBtn = row.querySelector('.bulk-ex-suggest-btn');
+  if (suggestBtn) {
+    suggestBtn.addEventListener('click', () => resolveSelection(suggestBtn.dataset.suggestId));
+  }
 
   row.querySelector('.bulk-ex-field[data-field="weight"]').addEventListener('input', (e) => {
     ex.weight = e.target.value;

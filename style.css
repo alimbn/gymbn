@@ -1707,10 +1707,18 @@ a.list-item {
   color: var(--danger);
 }
 
-.bulk-ex-parsed-hint {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 3px;
+.bulk-ex-suggest-btn {
+  display: block;
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  font-size: 11.5px;
+  font-family: inherit;
+  padding: 3px 0 0;
+  margin: 0;
+  cursor: pointer;
+  text-align: left;
 }
 
 .bulk-exercise-row-fields {
