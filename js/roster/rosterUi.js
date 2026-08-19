@@ -1,4 +1,4 @@
-import { escapeHtml, ICON_TRASH } from '../util.js';
+import { escapeHtml, ICON_TRASH, vibrate } from '../util.js';
 import { confirmSheet } from '../components/confirmSheet.js';
 
 // libraryList.js'in .list/.list-item görsel dilini paylaşıyor ama roster'a özgü
@@ -43,16 +43,45 @@ export async function renderRosterScreen(container, config) {
         <p class="muted">Davet linki oluşturuldu, kopyala ve gönder:</p>
         <div class="invite-link-row">
           <input type="text" readonly value="${escapeHtml(link)}" class="invite-link-input" id="invite-link-input">
-          <button type="button" class="btn btn-primary invite-copy-btn">Kopyala</button>
+          <button type="button" class="btn btn-primary invite-copy-btn" data-copied-label="Kopyalandı ✓"><span class="copy-label-text">Kopyala</span></button>
         </div>
       </div>
     `;
-    invitePanel.querySelector('.invite-copy-btn').addEventListener('click', () => copyLink(link));
+    const btn = invitePanel.querySelector('.invite-copy-btn');
+    btn.addEventListener('click', () => copyLink(link, btn));
   }
 
-  async function copyLink(link) {
+  // Kopyalama sessizce oluyordu, tıklandığı belli olmuyordu — buton kısa süre
+  // başarı rengine "parlayıp" yavaşça eski haline dönüyor, ifadesi de aynı anda
+  // değişip geri dönüyor (metin buton "Kopyalandı ✓", ikon buton "✓"), artı
+  // hafif bir haptik darbe. Sadece kopyalama GERÇEKTEN başarılıysa tetikleniyor —
+  // clipboard API başarısız olup input'a odaklanma yedeğine düştüğünde değil.
+  function flashCopied(btn) {
+    vibrate(15);
+    btn.classList.add('is-copied');
+    setTimeout(() => btn.classList.remove('is-copied'), 900);
+    const label = btn.querySelector('.copy-label-text');
+    if (!label) return;
+    const original = label.textContent;
+    const copiedText = btn.dataset.copiedLabel || '✓';
+    label.style.opacity = '0';
+    setTimeout(() => {
+      label.textContent = copiedText;
+      label.style.opacity = '1';
+    }, 150);
+    setTimeout(() => {
+      label.style.opacity = '0';
+      setTimeout(() => {
+        label.textContent = original;
+        label.style.opacity = '1';
+      }, 150);
+    }, 1300);
+  }
+
+  async function copyLink(link, btn) {
     try {
       await navigator.clipboard.writeText(link);
+      if (btn) flashCopied(btn);
     } catch {
       const input = invitePanel.querySelector('#invite-link-input');
       if (input) { input.focus(); input.select(); }
@@ -75,7 +104,7 @@ export async function renderRosterScreen(container, config) {
                 <div class="list-item-sub">Bekliyor</div>
               </div>
               <div class="list-item-actions">
-                <button type="button" class="btn-icon invite-copy-again-btn" aria-label="Linki kopyala" title="Linki kopyala">⧉</button>
+                <button type="button" class="btn-icon invite-copy-again-btn" aria-label="Linki kopyala" title="Linki kopyala"><span class="copy-label-text">⧉</span></button>
                 ${onCancelInvite ? `<button type="button" class="btn-icon danger invite-cancel-btn" aria-label="İptal et">${ICON_TRASH}</button>` : ''}
               </div>
             </div>
@@ -84,7 +113,8 @@ export async function renderRosterScreen(container, config) {
       </div>
     `;
     pendingRoot.querySelectorAll('.list-item').forEach((row, i) => {
-      row.querySelector('.invite-copy-again-btn').addEventListener('click', () => copyLink(invites[i].link));
+      const copyAgainBtn = row.querySelector('.invite-copy-again-btn');
+      copyAgainBtn.addEventListener('click', () => copyLink(invites[i].link, copyAgainBtn));
       const cancelBtn = row.querySelector('.invite-cancel-btn');
       if (cancelBtn) {
         cancelBtn.addEventListener('click', async () => {
