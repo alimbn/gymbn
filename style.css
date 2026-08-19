@@ -1892,6 +1892,29 @@ a.list-item {
   padding: 10px 14px;
 }
 
+.copy-label-text {
+  transition: opacity 0.15s ease;
+}
+
+.invite-copy-btn,
+.invite-copy-again-btn {
+  transition: background 0.6s ease, border-color 0.6s ease, color 0.6s ease, box-shadow 0.6s ease;
+}
+
+.invite-copy-btn.is-copied {
+  background: var(--success);
+  border-color: var(--success);
+  color: var(--primary-text);
+  box-shadow: 0 0 0 3px rgba(111, 162, 135, 0.4);
+}
+
+.invite-copy-again-btn.is-copied {
+  color: var(--success);
+  background: rgba(111, 162, 135, 0.18);
+  box-shadow: 0 0 0 3px rgba(111, 162, 135, 0.3);
+  border-radius: 8px;
+}
+
 .roster-pending-section {
   margin-bottom: var(--space-4);
 }
