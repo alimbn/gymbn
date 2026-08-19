@@ -31,19 +31,27 @@ function defaultState() {
   };
 }
 
+// "Son sefer" gerçekten KAYDEDİLMİŞ (en az bir set touched) örnekler arasından,
+// günün takvim tarihine değil `loggedAt`'e (gerçek kayıt anı) göre seçiliyor —
+// program haftalık atanıp sırayla değil karışık yapılabiliyor (ör. 20'sini
+// 17'sinden önce girme), o yüzden tarih sırası "son"u yanlış gösterebiliyordu.
+// Bu alan eklenmeden ÖNCE kaydedilmiş eski örneklerde `loggedAt` yok — o yüzden
+// eski veri kaybolmasın diye günün tarihine düşüyoruz (eski davranışla aynı sıra).
 function rebuildHistoryIndex() {
   const idx = {};
   for (const day of state.dayEntries) {
     for (const inst of day.exercises) {
+      if (!inst.actualSets.some((s) => s.touched)) continue;
       (idx[inst.exerciseId] ??= []).push({
         date: day.date,
         dayEntryId: day.id,
         prescribed: inst.prescribed,
         actualSets: inst.actualSets,
+        loggedAt: inst.loggedAt || isoToDate(day.date).getTime(),
       });
     }
   }
-  for (const list of Object.values(idx)) list.sort((a, b) => a.date.localeCompare(b.date));
+  for (const list of Object.values(idx)) list.sort((a, b) => a.loggedAt - b.loggedAt);
   historyIndex = idx;
 }
 
@@ -238,6 +246,7 @@ function buildInstance(exerciseId, prescribed) {
     exerciseId,
     note: '',
     status: null,
+    loggedAt: null,
     prescribed,
     actualSets: buildActualSetsFromPrescribed(prescribed, isDuration),
   };
@@ -329,6 +338,7 @@ export function updateActualSetField(dayId, instId, setIndex, field, value, debo
   const row = inst.actualSets[setIndex];
   row[field] = value;
   row.touched = true;
+  inst.loggedAt = Date.now();
   for (let i = setIndex + 1; i < inst.actualSets.length; i++) {
     const next = inst.actualSets[i];
     if (!next.touched) {
