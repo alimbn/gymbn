@@ -506,16 +506,55 @@ a.list-item {
   position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
+  gap: var(--space-1);
   border-bottom: 1px solid var(--border);
-  padding: var(--space-3) var(--space-2) var(--space-3) var(--space-3);
+  padding: var(--space-3) var(--space-2) var(--space-3) var(--space-1);
   min-height: 60px;
-  cursor: pointer;
 }
 
 .week-slot.empty {
   opacity: 0.55;
+}
+
+.week-slot.dragging {
+  opacity: 0.4;
+  background: var(--surface-2);
+}
+
+.week-slot-handle,
+.week-slot-handle-spacer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 44px;
+  flex-shrink: 0;
+}
+
+.week-slot-handle {
+  color: var(--text-suggested);
+  cursor: grab;
+  touch-action: none;
+}
+
+.week-slot-handle:active {
+  cursor: grabbing;
+  color: var(--primary);
+}
+
+.week-slot-handle svg {
+  width: 16px;
+  height: 16px;
+}
+
+.week-slot-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
+  cursor: pointer;
 }
 
 .week-slot.today::before {
