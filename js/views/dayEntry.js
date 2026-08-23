@@ -240,7 +240,7 @@ function renderEntry(container, entry) {
   container.querySelector('#add-exercise-btn').addEventListener('click', () => {
     const activeExercises = exercises.active();
     if (!activeExercises.length) {
-      alert('Önce "Diğer > Egzersizler" ekranından en az bir egzersiz eklemelisin.');
+      alert('Önce "Ayarlar > Egzersizler" ekranından en az bir egzersiz eklemelisin.');
       return;
     }
     openPicker({

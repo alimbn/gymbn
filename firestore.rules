@@ -16,6 +16,13 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/students/$(studentUid))
         && get(/databases/$(database)/documents/students/$(studentUid)).data.coachId == request.auth.uid;
     }
+    // isCoachOfStudent'ın tersi: öğrenci kendi hocasının doc'unu (sadece ismini
+    // göstermek için) okuyabilsin mi. Ayarlar ekranındaki "Hocan: ..." satırı için.
+    function isMyCoach(coachUid) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/students/$(request.auth.uid))
+        && get(/databases/$(database)/documents/students/$(request.auth.uid)).data.coachId == coachUid;
+    }
 
     // ---- Mevcut kullanıcı verisi: DEĞİŞMEDİ, sadece bir OR ile genişledi ----
     // request.auth.uid == userId satırı hiç dokunulmadan aynı kaldı; isCoachOfStudent
@@ -37,7 +44,7 @@ service cloud.firestore {
     // ---- coaches: doc ID = hocanın gerçek uid'i. Sadece geçerli, pending bir
     // coachInvites token'ı sunularak (join.html'in runTransaction'ı içinde) oluşturulabilir. ----
     match /coaches/{coachUid} {
-      allow get: if isSignedIn() && request.auth.uid == coachUid;
+      allow get: if isSignedIn() && (request.auth.uid == coachUid || isMyCoach(coachUid));
       allow list: if isAdmin();
       allow create: if isSignedIn()
         && request.auth.uid == coachUid

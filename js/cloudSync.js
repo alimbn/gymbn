@@ -95,6 +95,27 @@ export async function pullRemoteIfNewer(localUpdatedAt) {
   }
 }
 
+// Bu hesap bir hocaya bağlı öğrenciyse (students/{uid} dokümanı varsa) o hocanın
+// adını getiriyor — Ayarlar ekranında salt-okunur gösterim için. Çoğu hesapta
+// (bireysel kullanım) students dokümanı hiç yok, o zaman sessizce null dönüyor,
+// ekranda hiçbir şey görünmüyor. firestore.rules'ta coaches/{uid}'in get izni
+// buna göre genişletildi (bkz. isMyCoach).
+export async function getMyCoachInfo() {
+  const user = auth.currentUser;
+  if (!user) return null;
+  try {
+    const studentSnap = await getDoc(doc(db, 'students', user.uid));
+    if (!studentSnap.exists()) return null;
+    const coachId = studentSnap.data().coachId;
+    if (!coachId) return null;
+    const coachSnap = await getDoc(doc(db, 'coaches', coachId));
+    return coachSnap.exists() ? { displayName: coachSnap.data().displayName } : null;
+  } catch (err) {
+    console.error('Hoca bilgisi okunamadı', err);
+    return null;
+  }
+}
+
 /** storage.js'in saveState()'i her çağrıldığında tetiklenir; kendi içinde ayrı debounce'u var. */
 export function scheduleCloudPush(state) {
   if (!pullCompleted) return;

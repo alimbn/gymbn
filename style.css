@@ -1601,6 +1601,28 @@ a.list-item {
   margin-bottom: var(--space-2);
 }
 
+.coach-info-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.coach-info-card svg {
+  width: 16px;
+  height: 16px;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.coach-info-card strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
 .more-menu {
   display: flex;
   flex-direction: column;

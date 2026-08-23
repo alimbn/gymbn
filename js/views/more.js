@@ -1,11 +1,15 @@
 import { exportBackup, importBackup } from '../storage.js';
-import { isRestTimerAutoResetEnabled, setRestTimerAutoResetEnabled, isExerciseMediaEnabled, setExerciseMediaEnabled } from '../util.js';
+import { isRestTimerAutoResetEnabled, setRestTimerAutoResetEnabled, isExerciseMediaEnabled, setExerciseMediaEnabled, ICON_COACH } from '../util.js';
 import { confirmSheet } from '../components/confirmSheet.js';
+import { getMyCoachInfo } from '../cloudSync.js';
 
 export function render(container) {
   container.innerHTML = `
     <div class="view-header">
-      <h2 class="view-title">Diğer</h2>
+      <h2 class="view-title">Ayarlar</h2>
+    </div>
+    <div class="card coach-info-card" id="coach-info-card" style="display:none;">
+      ${ICON_COACH}<span>Hocan: <strong id="coach-info-name"></strong></span>
     </div>
     <div class="more-menu">
       <a class="more-menu-item" href="#/exercises"><span>Egzersizler</span><span class="chevron">›</span></a>
@@ -84,5 +88,14 @@ export function render(container) {
       }
       location.reload();
     });
+  });
+
+  getMyCoachInfo().then((info) => {
+    if (!info) return;
+    const nameEl = container.querySelector('#coach-info-name');
+    const cardEl = container.querySelector('#coach-info-card');
+    if (!nameEl || !cardEl) return; // kullanıcı bu sırada başka ekrana geçmiş olabilir
+    nameEl.textContent = info.displayName;
+    cardEl.style.display = '';
   });
 }
