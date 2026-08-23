@@ -16,6 +16,11 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/students/$(studentUid))
         && get(/databases/$(database)/documents/students/$(studentUid)).data.coachId == request.auth.uid;
     }
+    // bulkAdd.js'in kendi kataloğa-zorunlu moduna geçebilmesi için: bu hesap
+    // GERÇEKTEN bir hocaya bağlı öğrenci mi (students/{kendi uid'i} var mı).
+    function isManagedStudent() {
+      return isSignedIn() && exists(/databases/$(database)/documents/students/$(request.auth.uid));
+    }
     // isCoachOfStudent'ın tersi: öğrenci kendi hocasının doc'unu (sadece ismini
     // göstermek için) okuyabilsin mi. Ayarlar ekranındaki "Hocan: ..." satırı için.
     function isMyCoach(coachUid) {
@@ -104,7 +109,7 @@ service cloud.firestore {
     // listesi (video linki + hedef bölge). Hoca sadece OKUR (program atarken seçim
     // listesi için) — yeni kayıt/düzenleme/silme YALNIZCA admin'de, hoca hiç yazamaz. ----
     match /exerciseCatalog/{exerciseId} {
-      allow get, list: if isCoach() || isAdmin();
+      allow get, list: if isCoach() || isAdmin() || isManagedStudent();
       allow create, update, delete: if isAdmin();
     }
 

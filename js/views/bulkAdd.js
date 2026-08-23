@@ -7,13 +7,33 @@ import {
 } from '../util.js';
 import { parseWeeklyProgramText } from '../bulkParse.js';
 import { confirmSheet } from '../components/confirmSheet.js';
+import { getMyCatalogIfManaged } from '../cloudSync.js';
+import { closestCatalogMatch } from '../shared/catalogMatch.js';
 
-export function render(container, params) {
+// `catalog` null ise bireysel hesap — eski serbest metin davranışı, hiç değişmedi.
+// Bir dizi ise (boş olsa bile) hesap coach-yönetimli bir öğrenci — o zaman isim
+// alanı zorunlu bir katalog seçimine dönüyor (assignProgram.js'teki AYNI mantık),
+// "kendi uydurma" bir isim yazıp sistemde tekrarlayan/yazım-hatalı kayıtlar
+// çoğaltmasın diye — kullanıcının kendi isteği.
+export async function render(container, params) {
   const monday = (params && params.mondayIso) || mondayOfWeek(todayIso());
-  renderPasteScreen(container, monday);
+  const catalog = await getMyCatalogIfManaged();
+  if (catalog && !catalog.length) {
+    container.innerHTML = `
+      <div class="view-header">
+        <button type="button" class="back-link" id="back-btn" aria-label="Geri">←</button>
+        <h2 class="view-title">Programı Yapıştır</h2>
+        <span></span>
+      </div>
+      <p class="empty-state">Egzersiz kütüphanesi henüz boş. Hocandan admin ekranından en az bir egzersiz eklemesini iste.</p>
+    `;
+    container.querySelector('#back-btn').addEventListener('click', () => history.back());
+    return;
+  }
+  renderPasteScreen(container, monday, catalog);
 }
 
-function renderPasteScreen(container, monday) {
+function renderPasteScreen(container, monday, catalog) {
   container.innerHTML = `
     <div class="view-header">
       <button type="button" class="back-link" id="back-btn" aria-label="Geri">←</button>
@@ -37,21 +57,27 @@ Barfiks 3 set 5-6 tekrar
     const text = container.querySelector('#paste-textarea').value;
     if (!text.trim()) return;
     const blocks = assignDefaultDates(
-      parseWeeklyProgramText(text).map((b) => enrichBlock(b)),
+      parseWeeklyProgramText(text).map((b) => enrichBlock(b, catalog)),
       monday,
     );
-    renderReviewScreen(container, monday, blocks);
+    renderReviewScreen(container, monday, blocks, catalog);
   });
 }
 
-function enrichBlock(block) {
+function enrichBlock(block, catalog) {
   const normalized = normalizeForMatch(block.dayTypeRaw);
   const matched = dayTypes.active().find((dt) => normalizeForMatch(dt.name) === normalized);
   return {
     dayTypeRaw: block.dayTypeRaw,
     dayTypeId: matched ? matched.id : null,
     assignedDate: null,
-    exercises: block.exercises.map((ex) => ({ ...ex })),
+    exercises: block.exercises.map((ex) => {
+      if (!catalog) return { ...ex };
+      const parsedName = ex.name;
+      const normalizedName = normalizeForMatch(parsedName);
+      const match = catalog.find((c) => normalizeForMatch(c.name) === normalizedName);
+      return { ...ex, parsedName, catalogId: match ? match.id : null };
+    }),
   };
 }
 
@@ -78,38 +104,44 @@ function describeExistingEntry(dateIso) {
   return `Bu günde zaten kayıt var: ${parts.join(' · ')}. Yeni egzersizler bunun üzerine eklenecek.`;
 }
 
-function renderReviewScreen(container, monday, blocks) {
+function renderReviewScreen(container, monday, blocks, catalog) {
   container.innerHTML = `
     <div class="view-header">
       <button type="button" class="back-link" id="back-to-paste-btn" aria-label="Geri">←</button>
       <h2 class="view-title">Önizleme</h2>
       <span></span>
     </div>
-    <p class="muted bulk-intro">${blocks.length} gün bulundu. Yanlış ayrıştırılan bir alan varsa düzelt, sonra onayla.</p>
+    <p class="muted bulk-intro">${blocks.length} gün bulundu. ${catalog ? 'Kırmızı çerçeveli egzersizler kataloğa eşleşmedi, kendin seç. ' : ''}Yanlış ayrıştırılan bir alan varsa düzelt, sonra onayla.</p>
     <div id="blocks-root"></div>
     <button type="button" class="btn btn-primary btn-block" id="confirm-btn">Onayla ve Ekle</button>
   `;
 
   container.querySelector('#back-to-paste-btn').addEventListener('click', () => {
-    renderPasteScreen(container, monday);
+    renderPasteScreen(container, monday, catalog);
   });
 
   const blocksRoot = container.querySelector('#blocks-root');
   blocks.forEach((block) => {
-    blocksRoot.appendChild(buildBlockCard(block));
+    blocksRoot.appendChild(buildBlockCard(block, catalog));
   });
 
   container.querySelector('#confirm-btn').addEventListener('click', async () => {
+    const unresolved = blocksRoot.querySelector('.bulk-ex-name-select.unresolved');
+    if (unresolved) {
+      unresolved.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      unresolved.focus();
+      return;
+    }
     const skipped = blocks.filter((b) => !b.assignedDate).length;
     if (skipped && !(await confirmSheet(`${skipped} gün tarihe atanmadığı için eklenmeyecek. Devam edilsin mi?`, { confirmLabel: 'Devam Et', danger: false }))) {
       return;
     }
-    commitBlocks(blocks);
+    commitBlocks(blocks, catalog);
     location.hash = '#/week/' + monday;
   });
 }
 
-function buildBlockCard(block) {
+function buildBlockCard(block, catalog) {
   const card = document.createElement('div');
   card.className = 'card bulk-block-card';
 
@@ -152,7 +184,7 @@ function buildBlockCard(block) {
 
   const exList = card.querySelector('.block-exercise-list');
   block.exercises.forEach((ex) => {
-    exList.appendChild(buildExerciseRow(ex, block, exList));
+    exList.appendChild(buildExerciseRow(ex, block, exList, catalog));
   });
 
   return card;
@@ -304,12 +336,36 @@ function openRangePicker({ title, max, current, allowFailure, onSelect }) {
   render();
 }
 
-function buildExerciseRow(ex, block, exList) {
+function buildExerciseRow(ex, block, exList, catalog) {
   const row = document.createElement('div');
   row.className = 'bulk-exercise-row';
+
+  let nameFieldHtml;
+  if (catalog) {
+    const sortedCatalog = [...catalog].sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+    const options = sortedCatalog.map((c) => (
+      `<option value="${c.id}"${ex.catalogId === c.id ? ' selected' : ''}>${escapeHtml(c.name)}</option>`
+    )).join('');
+    const placeholderLabel = ex.catalogId
+      ? '— eşleşme yok, seç —'
+      : `"${ex.parsedName || ''}" — eşleşme yok, seç`;
+    const suggestion = ex.catalogId ? null : closestCatalogMatch(ex.parsedName, catalog);
+    nameFieldHtml = `
+      <div class="bulk-ex-name-wrap">
+        <select class="bulk-ex-name-select${ex.catalogId ? '' : ' unresolved'}">
+          <option value="">${escapeHtml(placeholderLabel)}</option>
+          ${options}
+        </select>
+        ${suggestion ? `<button type="button" class="bulk-ex-suggest-btn" data-suggest-id="${suggestion.id}">Bunu mu demek istedin: "${escapeHtml(suggestion.name)}"?</button>` : ''}
+      </div>
+    `;
+  } else {
+    nameFieldHtml = `<input type="text" class="bulk-ex-name" value="${escapeHtml(ex.name)}" placeholder="Egzersiz adı">`;
+  }
+
   row.innerHTML = `
     <div class="bulk-exercise-row-top">
-      <input type="text" class="bulk-ex-name" value="${escapeHtml(ex.name)}" placeholder="Egzersiz adı">
+      ${nameFieldHtml}
       <button type="button" class="btn-icon danger bulk-ex-remove" aria-label="Satırı sil">×</button>
     </div>
     <div class="bulk-exercise-row-fields">
@@ -333,9 +389,27 @@ function buildExerciseRow(ex, block, exList) {
     <input type="text" class="bulk-ex-note" value="${escapeHtml(ex.coachNote)}" placeholder="Hoca notu (opsiyonel)">
   `;
 
-  row.querySelector('.bulk-ex-name').addEventListener('input', (e) => {
-    ex.name = e.target.value;
-  });
+  if (catalog) {
+    const nameSelect = row.querySelector('.bulk-ex-name-select');
+    function resolveSelection(catalogId) {
+      const catalogEx = catalog.find((c) => c.id === catalogId);
+      ex.catalogId = catalogEx ? catalogEx.id : null;
+      ex.name = catalogEx ? catalogEx.name : '';
+      nameSelect.value = ex.catalogId || '';
+      nameSelect.classList.toggle('unresolved', !ex.catalogId);
+      const suggestBtn = row.querySelector('.bulk-ex-suggest-btn');
+      if (suggestBtn) suggestBtn.style.display = ex.catalogId ? 'none' : '';
+    }
+    nameSelect.addEventListener('change', (e) => resolveSelection(e.target.value));
+    const suggestBtn = row.querySelector('.bulk-ex-suggest-btn');
+    if (suggestBtn) {
+      suggestBtn.addEventListener('click', () => resolveSelection(suggestBtn.dataset.suggestId));
+    }
+  } else {
+    row.querySelector('.bulk-ex-name').addEventListener('input', (e) => {
+      ex.name = e.target.value;
+    });
+  }
 
   row.querySelector('.bulk-ex-field[data-field="weight"]').addEventListener('input', (e) => {
     ex.weight = e.target.value;
@@ -394,7 +468,7 @@ function buildExerciseRow(ex, block, exList) {
   return row;
 }
 
-function commitBlocks(blocks) {
+function commitBlocks(blocks, catalog) {
   for (const block of blocks) {
     if (!block.assignedDate) continue;
 
@@ -413,12 +487,22 @@ function commitBlocks(blocks) {
     }
 
     for (const ex of block.exercises) {
-      if (!ex.name) continue;
-      const normalized = normalizeForMatch(ex.name);
-      let exercise = exercises.active().find((e) => normalizeForMatch(e.name) === normalized);
-      // Sadece YENİ oluşturulan bir egzersiz için süre tipi otomatik ayarlanıyor —
-      // zaten var olan bir eşleşmenin tipini sürpriz şekilde değiştirmiyoruz.
-      if (!exercise) exercise = exercises.add(ex.name, ex.detectedDuration);
+      let exercise;
+      if (catalog) {
+        // Onayla ekranı zaten eşleşmemiş (.unresolved) satır varken engelliyor —
+        // catalogId'siz bir satıra buraya kadar gelinmemesi gerekiyor, savunma amaçlı atla.
+        if (!ex.catalogId) continue;
+        const catalogEx = catalog.find((c) => c.id === ex.catalogId);
+        if (!catalogEx) continue;
+        exercise = exercises.resolveFromCatalog(catalogEx);
+      } else {
+        if (!ex.name) continue;
+        const normalized = normalizeForMatch(ex.name);
+        exercise = exercises.active().find((e) => normalizeForMatch(e.name) === normalized);
+        // Sadece YENİ oluşturulan bir egzersiz için süre tipi otomatik ayarlanıyor —
+        // zaten var olan bir eşleşmenin tipini sürpriz şekilde değiştirmiyoruz.
+        if (!exercise) exercise = exercises.add(ex.name, ex.detectedDuration);
+      }
       addExerciseInstanceWithPrescribed(
         entry.id,
         exercise.id,

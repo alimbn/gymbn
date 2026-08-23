@@ -127,6 +127,25 @@ export async function getMyCoachInfo() {
   }
 }
 
+// bulkAdd.js için: hesap coach-yönetimli bir öğrenciyse (students/{uid} var)
+// paylaşılan admin kataloğunu döner — o zaman bulkAdd.js "kendi uydurma" isim
+// kabul etmeyip zorunlu bir dropdown'a geçiyor (hoca tarafındaki AYNI mantık,
+// tekrarlayan/yazım-hatalı isimler sistem genelinde çoğalmasın diye). Bireysel
+// hesaplarda (students dokümanı yok) null dönüp bulkAdd.js'in eski serbest metin
+// davranışını hiç değiştirmiyor. firestore.rules'ta exerciseCatalog'un get/list
+// izni buna göre genişletildi (bkz. isManagedStudent).
+export async function getMyCatalogIfManaged() {
+  try {
+    const rec = await getMyStudentRecord();
+    if (!rec) return null;
+    const snap = await getDocs(collection(db, 'exerciseCatalog'));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((e) => !e.archived);
+  } catch (err) {
+    console.error('Katalog okunamadı', err);
+    return null;
+  }
+}
+
 /* ---------- Uygulama içi bildirimler ---------- */
 
 export async function listMyNotifications() {

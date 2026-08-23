@@ -147,6 +147,25 @@ export const exercises = {
   active: () => activeLibraryItems('exercises'),
   all: () => state.exercises,
   byId: (id) => libraryItemById('exercises', id),
+  // assignProgram.js'teki resolveLocalExercise ile aynı desen: paylaşılan admin
+  // kataloğundan gelen egzersizin O ANKİ verisini (isim/video/hedef bölge) kopyalar.
+  // Aynı katalog kaydı ikinci kez kullanılırsa (aynı sourceCatalogId) yeni kopya
+  // açmak yerine var olanı tazeler — admin sonradan video/bölge güncellerse bir
+  // sonraki yapıştırmada otomatik yansır. bulkAdd.js'in coach-yönetimli hesap
+  // yolundan çağrılıyor, bireysel kullanımda hiç devreye girmiyor.
+  resolveFromCatalog: (catalogEx) => {
+    let item = state.exercises.find((e) => e.sourceCatalogId === catalogEx.id);
+    if (!item) {
+      item = { id: uid('ex'), archived: false, sourceCatalogId: catalogEx.id };
+      state.exercises.push(item);
+    }
+    item.name = catalogEx.name;
+    item.isDuration = !!catalogEx.isDuration;
+    item.videoUrl = catalogEx.videoUrl || '';
+    item.targetRegions = catalogEx.targetRegions || [];
+    saveState(false);
+    return item;
+  },
 };
 
 export const dayTypes = {

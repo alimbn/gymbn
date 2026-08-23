@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gymbn-v69';
+const CACHE_NAME = 'gymbn-v70';
 
 const PRECACHE_URLS = [
   './',
@@ -20,6 +20,7 @@ const PRECACHE_URLS = [
   './js/joinApp.js',
   './js/shared/firebaseClient.js',
   './js/shared/loginForm.js',
+  './js/shared/catalogMatch.js',
   './js/roster/rosterUi.js',
   './js/admin/adminCloud.js',
   './js/admin/coachRoster.js',
