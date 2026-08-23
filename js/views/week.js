@@ -79,7 +79,7 @@ function buildSlot(date, isToday) {
   // hedefi — dolu bir günü boş bir güne sürükleyince oraya taşınabiliyor.
   const handle = entry ? `<div class="week-slot-handle" aria-label="Sürükleyerek taşı">${HANDLE_SVG}</div>` : '<div class="week-slot-handle-spacer"></div>';
   return `
-    <div class="week-slot ${stateClass}${isToday ? ' today' : ''}" data-date="${date}">
+    <div class="week-slot ${stateClass}${isToday ? ' today' : ''}${entry?.completed ? ' completed' : ''}" data-date="${date}">
       ${handle}
       <div class="week-slot-main">
         <div class="week-slot-day">

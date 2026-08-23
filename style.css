@@ -714,6 +714,14 @@ a.list-item {
   flex: 1;
   font-weight: 600;
   font-size: 13.5px;
+  transition: color 0.2s ease;
+}
+
+/* dayEntry.js'teki tamamlanmış egzersiz adının aynı soluklaşması
+   (.exercise-card.collapsed.marked .exercise-name) — haftalık listede de gün
+   tamamlanınca başlık aynı şekilde soluklaşıyor. */
+.week-slot.completed .week-slot-title {
+  color: var(--text-muted);
 }
 
 .week-slot-sub {
