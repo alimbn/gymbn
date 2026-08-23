@@ -7,6 +7,7 @@ import {
   dayOfWeekLabel, formatDateShortTr, escapeHtml, statusBadge, formatDuration, vibrate,
   ICON_TRASH, ICON_NOTE, ICON_COACH, isExerciseMediaEnabled, youTubeEmbedId,
 } from '../util.js';
+import { notifyMyCoach } from '../cloudSync.js';
 import { renderSetRows } from '../components/setRows.js';
 import { openPicker } from '../components/picker.js';
 import { confirmSheet } from '../components/confirmSheet.js';
@@ -112,6 +113,8 @@ function renderEntry(container, entry) {
       entry.workoutStartedAt = Date.now();
       updateDayEntryField(entry.id, 'workoutStartedAt', entry.workoutStartedAt, false);
       renderWorkoutTimer();
+      const dt = entry.dayTypeId ? dayTypes.byId(entry.dayTypeId) : null;
+      notifyMyCoach('workout_started', `${dt ? dt.name : 'Antrenman'} antrenmanına başladı`);
     });
   }
   renderWorkoutTimer();
@@ -190,7 +193,12 @@ function renderEntry(container, entry) {
     }
     updateDayEntryField(entry.id, 'completed', entry.completed, false);
     updateCompleteBtn();
-    if (entry.completed) playCompleteCelebration();
+    if (entry.completed) {
+      playCompleteCelebration();
+      const dt = entry.dayTypeId ? dayTypes.byId(entry.dayTypeId) : null;
+      const durationNote = entry.workoutDurationSec ? ` (${formatDuration(entry.workoutDurationSec)})` : '';
+      notifyMyCoach('workout_completed', `${dt ? dt.name : 'Antrenman'} antrenmanını tamamladı${durationNote}`);
+    }
   });
 
   // Accordion: only one exercise card expanded at a time, so mid-workout you can

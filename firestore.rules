@@ -115,5 +115,20 @@ service cloud.firestore {
     match /targetRegions/{regionId} {
       allow get, list, create, update, delete: if isAdmin();
     }
+
+    // ---- notifications: uygulama içi bildirim. Alıcı SADECE kendi bildirimlerini
+    // görebiliyor/okundu işaretleyebiliyor; oluşturma sadece gerçek bir hoca↔öğrenci
+    // ilişkisi varsa mümkün (isCoachOfStudent / isMyCoach) — rastgele birine bildirim
+    // yazılamıyor. Update sadece `read` alanını değiştirebiliyor. Silme yok (v1). ----
+    match /notifications/{notifId} {
+      allow get, list: if isSignedIn() && resource.data.recipientUid == request.auth.uid;
+      allow create: if isSignedIn()
+        && request.resource.data.senderUid == request.auth.uid
+        && (isCoachOfStudent(request.resource.data.recipientUid) || isMyCoach(request.resource.data.recipientUid));
+      allow update: if isSignedIn()
+        && resource.data.recipientUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow delete: if false;
+    }
   }
 }

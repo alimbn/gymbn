@@ -123,9 +123,11 @@ button {
   z-index: 10;
   height: calc(var(--header-h) + var(--safe-top));
   padding-top: var(--safe-top);
+  padding-left: var(--space-3);
+  padding-right: var(--space-3);
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
@@ -139,6 +141,128 @@ button {
 
 .app-title-accent {
   color: var(--primary);
+}
+
+/* Bildirim zili — index.html'in .app-header'ında ve coach.html'in roster
+   ekranında monte ediliyor (js/components/notificationBell.js). Normal bir flex
+   öğesi olarak tasarlandı (absolute DEĞİL) ki iki farklı header bağlamına da
+   (space-between .app-header + spacer, veya .view-header'ın kendi sağ ucu) aynı
+   şekilde otursun. */
+.bell-btn {
+  position: relative;
+  flex-shrink: 0;
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: var(--space-2);
+  line-height: 1;
+}
+
+.bell-btn svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+.app-header-spacer {
+  width: 36px;
+  flex-shrink: 0;
+}
+
+.view-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.bell-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--danger);
+  border: 1.5px solid var(--surface);
+}
+
+.notif-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.notif-sheet-title {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.notif-mark-read {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: var(--space-1);
+}
+
+.notif-item {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+
+.notif-item:last-child {
+  border-bottom: none;
+}
+
+.notif-item.unread {
+  cursor: pointer;
+}
+
+.notif-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  background: var(--surface-2);
+}
+
+.notif-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.notif-text {
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+
+.notif-time {
+  font-size: 11px;
+  color: var(--text-suggested);
+  margin-top: 3px;
+  font-family: var(--font-mono);
+}
+
+.notif-unread-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--primary);
+  flex-shrink: 0;
+  margin-top: 5px;
 }
 
 /* View root */

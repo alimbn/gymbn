@@ -3,7 +3,7 @@ import {
   onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail,
 } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 import {
-  doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs, serverTimestamp,
+  doc, getDoc, setDoc, deleteDoc, collection, query, where, orderBy, limit, getDocs, addDoc, updateDoc, serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
 
 export function onCoachAuthReady(callback) {
@@ -83,4 +83,50 @@ export async function setStudentAppState(studentUid, state) {
 export async function listCatalog() {
   const snap = await getDocs(collection(db, 'exerciseCatalog'));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((e) => !e.archived);
+}
+
+/* ---------- Uygulama içi bildirimler ---------- */
+
+// Öğrenciye "program atandı" bildirimindeki gönderen adı için.
+export async function getMyCoachProfile() {
+  const user = auth.currentUser;
+  if (!user) return null;
+  const snap = await getDoc(doc(db, 'coaches', user.uid));
+  return snap.exists() ? { displayName: snap.data().displayName } : null;
+}
+
+export async function listMyNotifications() {
+  const user = auth.currentUser;
+  if (!user) return [];
+  const snap = await getDocs(query(
+    collection(db, 'notifications'),
+    where('recipientUid', '==', user.uid),
+    orderBy('createdAt', 'desc'),
+    limit(30),
+  ));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function markNotificationRead(id) {
+  await updateDoc(doc(db, 'notifications', id), { read: true });
+}
+
+// Program atama başarıyla kaydedildikten sonra assignProgram.js'ten çağrılıyor.
+// Bildirim yazımı başarısız olsa bile asıl atama zaten kaydedilmiş oluyor —
+// burada sessizce yutuyoruz ki çağıran taraf "atama başarısız" gibi yanlış bir
+// hata göstermek zorunda kalmasın.
+export async function notifyStudent(studentUid, type, message) {
+  try {
+    const user = auth.currentUser;
+    await addDoc(collection(db, 'notifications'), {
+      recipientUid: studentUid,
+      senderUid: user.uid,
+      type,
+      message,
+      read: false,
+      createdAt: serverTimestamp(),
+    });
+  } catch (err) {
+    console.error('Öğrenciye bildirim gönderilemedi', err);
+  }
 }

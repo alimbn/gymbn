@@ -1,10 +1,11 @@
 import { renderRosterScreen } from '../roster/rosterUi.js';
 import {
   listMyStudents, listPendingStudentInvites, createStudentInvite, cancelStudentInvite, coachSignOut,
-  getStudentAppState,
+  getStudentAppState, listMyNotifications, markNotificationRead,
 } from './coachCloud.js';
 import { cycleStatus } from './paymentCycle.js';
 import { formatDateShortTr } from '../util.js';
+import { initNotificationBell } from '../components/notificationBell.js';
 
 function buildInviteLink(token) {
   const url = new URL('./join.html', location.href);
@@ -41,10 +42,16 @@ export async function render(container) {
   container.innerHTML = `
     <div class="view-header">
       <h2 class="view-title">Öğrenciler</h2>
-      <button type="button" class="btn btn-ghost" id="coach-signout-btn">Çıkış</button>
+      <div class="view-header-actions" id="header-actions"></div>
     </div>
     <div id="coach-body"></div>
   `;
+  const headerActions = container.querySelector('#header-actions');
+  initNotificationBell(headerActions, {
+    listNotifications: listMyNotifications,
+    markNotificationRead,
+  });
+  headerActions.insertAdjacentHTML('beforeend', '<button type="button" class="btn btn-ghost" id="coach-signout-btn">Çıkış</button>');
   container.querySelector('#coach-signout-btn').addEventListener('click', () => coachSignOut());
 
   await renderRosterScreen(container.querySelector('#coach-body'), {

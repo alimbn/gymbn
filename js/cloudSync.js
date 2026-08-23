@@ -15,6 +15,14 @@ import {
   getDoc,
   setDoc,
   serverTimestamp,
+  collection,
+  query,
+  where,
+  orderBy,
+  limit,
+  getDocs,
+  addDoc,
+  updateDoc,
 } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
 
 const firebaseConfig = {
@@ -95,24 +103,79 @@ export async function pullRemoteIfNewer(localUpdatedAt) {
   }
 }
 
-// Bu hesap bir hocaya bağlı öğrenciyse (students/{uid} dokümanı varsa) o hocanın
-// adını getiriyor — Ayarlar ekranında salt-okunur gösterim için. Çoğu hesapta
-// (bireysel kullanım) students dokümanı hiç yok, o zaman sessizce null dönüyor,
-// ekranda hiçbir şey görünmüyor. firestore.rules'ta coaches/{uid}'in get izni
-// buna göre genişletildi (bkz. isMyCoach).
-export async function getMyCoachInfo() {
+// Bu hesap bir hocaya bağlı öğrenciyse students/{uid} dokümanını (displayName +
+// coachId) döner, değilse (bireysel kullanım, ki çoğu hesap böyle) sessizce null
+// — hata fırlatmıyor.
+async function getMyStudentRecord() {
   const user = auth.currentUser;
   if (!user) return null;
+  const snap = await getDoc(doc(db, 'students', user.uid));
+  return snap.exists() ? snap.data() : null;
+}
+
+// Ayarlar ekranındaki salt-okunur "Hocan: ..." satırı için. firestore.rules'ta
+// coaches/{uid}'in get izni buna göre genişletildi (bkz. isMyCoach).
+export async function getMyCoachInfo() {
   try {
-    const studentSnap = await getDoc(doc(db, 'students', user.uid));
-    if (!studentSnap.exists()) return null;
-    const coachId = studentSnap.data().coachId;
-    if (!coachId) return null;
-    const coachSnap = await getDoc(doc(db, 'coaches', coachId));
+    const rec = await getMyStudentRecord();
+    if (!rec || !rec.coachId) return null;
+    const coachSnap = await getDoc(doc(db, 'coaches', rec.coachId));
     return coachSnap.exists() ? { displayName: coachSnap.data().displayName } : null;
   } catch (err) {
     console.error('Hoca bilgisi okunamadı', err);
     return null;
+  }
+}
+
+/* ---------- Uygulama içi bildirimler ---------- */
+
+export async function listMyNotifications() {
+  const user = auth.currentUser;
+  if (!user) return [];
+  try {
+    const snap = await getDocs(query(
+      collection(db, 'notifications'),
+      where('recipientUid', '==', user.uid),
+      orderBy('createdAt', 'desc'),
+      limit(30),
+    ));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    console.error('Bildirimler okunamadı', err);
+    return [];
+  }
+}
+
+export async function markNotificationRead(id) {
+  try {
+    await updateDoc(doc(db, 'notifications', id), { read: true });
+  } catch (err) {
+    console.error('Bildirim okundu işaretlenemedi', err);
+  }
+}
+
+// Antrenman başlat/tamamla anlarında çağrılıyor — sadece hocaya bağlı hesaplarda
+// gerçekten bir şey yazıyor, bireysel kullanımda sessizce hiçbir şey yapmıyor.
+// `detail` sadece olayın kendisini anlatıyor ("Anterior-1 antrenmanına başladı") —
+// öğrencinin adını students/{uid}'den kendi ekliyor, çağıran taraf bilmek zorunda
+// değil (personal app kendi adını hiç saklamıyor, sadece bu dokümanda duruyor).
+export async function notifyMyCoach(type, detail) {
+  const user = auth.currentUser;
+  if (!user) return;
+  try {
+    const rec = await getMyStudentRecord();
+    if (!rec || !rec.coachId) return;
+    const name = rec.displayName || 'Öğrencin';
+    await addDoc(collection(db, 'notifications'), {
+      recipientUid: rec.coachId,
+      senderUid: user.uid,
+      type,
+      message: `${name} ${detail}`,
+      read: false,
+      createdAt: serverTimestamp(),
+    });
+  } catch (err) {
+    console.error('Hocaya bildirim gönderilemedi', err);
   }
 }
 

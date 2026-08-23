@@ -2,7 +2,8 @@ import { loadState, getState } from './storage.js';
 import { addRoute, renderRoute } from './router.js';
 import { todayIso, mondayOfWeek } from './util.js';
 import { boot, unlockAppShell } from './auth.js';
-import { pullRemoteIfNewer } from './cloudSync.js';
+import { pullRemoteIfNewer, listMyNotifications, markNotificationRead } from './cloudSync.js';
+import { initNotificationBell } from './components/notificationBell.js';
 import * as dashboard from './views/dashboard.js';
 import * as week from './views/week.js';
 import * as weekSummary from './views/weekSummary.js';
@@ -70,6 +71,13 @@ function initApp() {
   // #view-root'un dışında, document.body'ye doğrudan ekleniyor — böylece
   // router her navigasyonda #view-root'u temizlese de kronometre kaybolmuyor.
   initRestTimer();
+
+  // Bireysel hesaplarda (students/{uid} yok) listMyNotifications hep boş dizi
+  // döner, zil sessizce hiç kırmızı nokta göstermez — davranışsal bir fark yok.
+  initNotificationBell(document.querySelector('.app-header'), {
+    listNotifications: listMyNotifications,
+    markNotificationRead,
+  });
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

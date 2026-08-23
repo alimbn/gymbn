@@ -1,6 +1,6 @@
 import { normalizeForMatch, addDaysIso, mondayOfWeek, todayIso, escapeHtml } from '../util.js';
 import { parseWeeklyProgramText } from '../bulkParse.js';
-import { getStudent, getStudentAppState, setStudentAppState, listCatalog } from './coachCloud.js';
+import { getStudent, getStudentAppState, setStudentAppState, listCatalog, getMyCoachProfile, notifyStudent } from './coachCloud.js';
 import { confirmSheet } from '../components/confirmSheet.js';
 
 // bulkAdd.js'in AYNI yapıştır→ayrıştır→düzenlenebilir önizleme→onayla akışı,
@@ -417,6 +417,7 @@ function renderReviewScreen(container, student, state, monday, blocks, catalog) 
     try {
       commitBlocks(state, blocks, catalog);
       await setStudentAppState(student.id, state);
+      notifyStudentOfAssignment(student.id, blocks); // arka planda, redirect'i beklemiyor
       location.hash = '#/';
     } catch (err) {
       console.error('Program atanamadı', err);
@@ -638,4 +639,15 @@ function commitBlocks(state, blocks, catalog) {
       );
     }
   }
+}
+
+// Ekranın kendi redirect'ini (location.hash) BEKLETMİYOR — bildirim gecikse/
+// başarısız olsa bile hoca zaten atamayı tamamlamış oluyor, buradaki hata
+// notifyStudent'ın kendi içinde sessizce yutuluyor.
+async function notifyStudentOfAssignment(studentUid, blocks) {
+  const names = blocks.filter((b) => b.assignedDate).map((b) => b.dayTypeRaw).filter(Boolean);
+  if (!names.length) return;
+  const coachProfile = await getMyCoachProfile();
+  const coachName = coachProfile?.displayName || 'Hocan';
+  notifyStudent(studentUid, 'program_assigned', `${coachName} sana yeni bir program atadı: ${names.join(', ')}`);
 }
