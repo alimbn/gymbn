@@ -98,17 +98,26 @@ export async function getMyCoachProfile() {
 export async function listMyNotifications() {
   const user = auth.currentUser;
   if (!user) return [];
-  const snap = await getDocs(query(
-    collection(db, 'notifications'),
-    where('recipientUid', '==', user.uid),
-    orderBy('createdAt', 'desc'),
-    limit(30),
-  ));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  try {
+    const snap = await getDocs(query(
+      collection(db, 'notifications'),
+      where('recipientUid', '==', user.uid),
+      orderBy('createdAt', 'desc'),
+      limit(30),
+    ));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    console.error('Bildirimler okunamadı', err);
+    return [];
+  }
 }
 
 export async function markNotificationRead(id) {
-  await updateDoc(doc(db, 'notifications', id), { read: true });
+  try {
+    await updateDoc(doc(db, 'notifications', id), { read: true });
+  } catch (err) {
+    console.error('Bildirim okundu işaretlenemedi', err);
+  }
 }
 
 // Program atama başarıyla kaydedildikten sonra assignProgram.js'ten çağrılıyor.
