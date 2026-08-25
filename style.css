@@ -171,6 +171,18 @@ button {
   flex-shrink: 0;
 }
 
+.app-header-back {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+}
+
 .view-header-actions {
   display: flex;
   align-items: center;

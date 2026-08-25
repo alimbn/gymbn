@@ -2,7 +2,7 @@ import { loadState, getState } from './storage.js';
 import { addRoute, renderRoute } from './router.js';
 import { todayIso, mondayOfWeek } from './util.js';
 import { boot, unlockAppShell } from './auth.js';
-import { pullRemoteIfNewer, listMyNotifications, markNotificationRead } from './cloudSync.js';
+import { pullRemoteIfNewer, listMyNotifications, markNotificationRead, isCurrentUserAlsoCoach } from './cloudSync.js';
 import { initNotificationBell } from './components/notificationBell.js';
 import * as dashboard from './views/dashboard.js';
 import * as week from './views/week.js';
@@ -77,6 +77,17 @@ function initApp() {
   initNotificationBell(document.querySelector('.app-header'), {
     listNotifications: listMyNotifications,
     markNotificationRead,
+  });
+
+  // Hoca "Kendi Antrenmanım"dan buraya geçtiyse, tek bir ayar satırına gömülü
+  // link yeterli değildi (kullanıcı bulamadı) — her ekranda görünen kalıcı
+  // header'a taşındı. Boş spacer'ı gerçek bir linke çeviriyor, genişliği aynı
+  // kaldığı için başlık ortalaması bozulmuyor.
+  isCurrentUserAlsoCoach().then((isCoach) => {
+    if (!isCoach) return;
+    const spacer = document.querySelector('.app-header-spacer');
+    if (!spacer) return;
+    spacer.outerHTML = '<a href="./coach.html" class="app-header-spacer app-header-back" aria-label="Hoca paneline dön">‹</a>';
   });
 
   if ('serviceWorker' in navigator) {
