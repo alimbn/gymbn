@@ -171,16 +171,26 @@ button {
   flex-shrink: 0;
 }
 
-.app-header-back {
-  height: 100%;
-  display: flex;
+/* Hoca "Kendi Antrenmanım"dan geçtiğinde, index.html'in her ekranında sabit
+   duran geri dönüş şeridi (bireysel/öğrenci hesaplarında hep gizli). Header'ın
+   kendisine hiç dokunmuyor — GYMBN başlığı ortalaması bozulmuyor. */
+.coach-return-bar {
+  position: sticky;
+  top: calc(var(--header-h) + var(--safe-top));
+  z-index: 9;
   align-items: center;
-  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
   color: var(--primary);
-  font-size: 24px;
+  font-size: 12.5px;
   font-weight: 700;
-  line-height: 1;
   text-decoration: none;
+}
+
+.coach-return-bar .chev {
+  font-size: 16px;
 }
 
 .view-header-actions {

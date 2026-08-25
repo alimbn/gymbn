@@ -79,15 +79,13 @@ function initApp() {
     markNotificationRead,
   });
 
-  // Hoca "Kendi Antrenmanım"dan buraya geçtiyse, tek bir ayar satırına gömülü
-  // link yeterli değildi (kullanıcı bulamadı) — her ekranda görünen kalıcı
-  // header'a taşındı. Boş spacer'ı gerçek bir linke çeviriyor, genişliği aynı
-  // kaldığı için başlık ortalaması bozulmuyor.
+  // Hoca "Kendi Antrenmanım"dan buraya geçtiyse, her ekranda sabit duran,
+  // açıkça yazılı geri dönüş şeridini gösteriyor (bkz. index.html'deki
+  // #coach-return-bar). Header'ın kendisine hiç dokunulmuyor.
   isCurrentUserAlsoCoach().then((isCoach) => {
     if (!isCoach) return;
-    const spacer = document.querySelector('.app-header-spacer');
-    if (!spacer) return;
-    spacer.outerHTML = '<a href="./coach.html" class="app-header-spacer app-header-back" aria-label="Hoca paneline dön">‹</a>';
+    const bar = document.getElementById('coach-return-bar');
+    if (bar) bar.style.display = 'flex';
   });
 
   if ('serviceWorker' in navigator) {

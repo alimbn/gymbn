@@ -1,7 +1,7 @@
 import { exportBackup, importBackup } from '../storage.js';
 import { isRestTimerAutoResetEnabled, setRestTimerAutoResetEnabled, isExerciseMediaEnabled, setExerciseMediaEnabled, ICON_COACH } from '../util.js';
 import { confirmSheet } from '../components/confirmSheet.js';
-import { getMyCoachInfo, isCurrentUserAlsoCoach } from '../cloudSync.js';
+import { getMyCoachInfo } from '../cloudSync.js';
 
 export function render(container) {
   container.innerHTML = `
@@ -11,7 +11,6 @@ export function render(container) {
     <div class="card coach-info-card" id="coach-info-card" style="display:none;">
       ${ICON_COACH}<span>Hocan: <strong id="coach-info-name"></strong></span>
     </div>
-    <a class="more-menu-item" id="back-to-coach-link" href="./coach.html" style="display:none; margin-bottom:var(--space-3);"><span>◀ Hoca Paneline Dön</span><span class="chevron">›</span></a>
     <div class="more-menu">
       <a class="more-menu-item" href="#/exercises"><span>Egzersizler</span><span class="chevron">›</span></a>
       <a class="more-menu-item" href="#/day-types"><span>Gün Tipleri</span><span class="chevron">›</span></a>
@@ -98,12 +97,5 @@ export function render(container) {
     if (!nameEl || !cardEl) return; // kullanıcı bu sırada başka ekrana geçmiş olabilir
     nameEl.textContent = info.displayName;
     cardEl.style.display = '';
-  });
-
-  isCurrentUserAlsoCoach().then((isCoach) => {
-    if (!isCoach) return;
-    const linkEl = container.querySelector('#back-to-coach-link');
-    if (!linkEl) return; // kullanıcı bu sırada başka ekrana geçmiş olabilir
-    linkEl.style.display = '';
   });
 }
