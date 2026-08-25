@@ -1,4 +1,7 @@
-import { auth, db } from '../shared/firebaseClient.js';
+// Bilerek firebaseClient.js'in İZOLE app'i DEĞİL, cloudSync.js'in DEFAULT app'i
+// kullanılıyor — hoca "Kendi Antrenmanım" sekmesine geçtiğinde index.html AYNI
+// oturumu görsün diye (ikinci login yok). admin.html/join.html hâlâ izole kalıyor.
+import { auth, db } from '../cloudSync.js';
 import {
   onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail,
 } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';

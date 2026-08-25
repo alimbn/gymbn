@@ -46,6 +46,10 @@ setPersistence(auth, browserLocalPersistence).catch((err) => {
   console.error('Auth kalıcılığı ayarlanamadı', err);
 });
 
+// coachCloud.js bilerek buradan import ediyor: hoca "Kendi Antrenmanım" ekranına
+// geçtiğinde index.html'in AYNI oturumunu kullansın diye (ikinci login olmasın).
+export { auth, db };
+
 let pullCompleted = false;
 let pushTimer = null;
 
@@ -124,6 +128,21 @@ export async function getMyCoachInfo() {
   } catch (err) {
     console.error('Hoca bilgisi okunamadı', err);
     return null;
+  }
+}
+
+// Ayarlar ekranındaki "◀ Hoca Paneline Dön" linki için: bu hesabın AYNI ZAMANDA
+// coaches/{uid} dokümanı da varsa (yani coach.html'den "Kendi Antrenmanım" ile
+// buraya geldiyse) true döner. Hata/yoksa sessizce false.
+export async function isCurrentUserAlsoCoach() {
+  try {
+    const user = auth.currentUser;
+    if (!user) return false;
+    const snap = await getDoc(doc(db, 'coaches', user.uid));
+    return snap.exists();
+  } catch (err) {
+    console.error('Hoca yetkisi kontrol edilemedi', err);
+    return false;
   }
 }
 

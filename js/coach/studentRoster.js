@@ -51,7 +51,7 @@ export async function render(container) {
     listNotifications: listMyNotifications,
     markNotificationRead,
   });
-  headerActions.insertAdjacentHTML('beforeend', '<button type="button" class="btn btn-ghost" id="coach-signout-btn">Çıkış</button>');
+  headerActions.insertAdjacentHTML('beforeend', '<a href="./index.html" class="btn btn-ghost">Kendi Antrenmanım</a><button type="button" class="btn btn-ghost" id="coach-signout-btn">Çıkış</button>');
   container.querySelector('#coach-signout-btn').addEventListener('click', () => coachSignOut());
 
   await renderRosterScreen(container.querySelector('#coach-body'), {
