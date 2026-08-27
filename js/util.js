@@ -63,11 +63,15 @@ export function setAppChromeHidden(hidden) {
   document.body.classList.toggle('chrome-hidden', hidden);
 }
 
-// Egzersiz durumunu (good/bad/null) her yerde aynı görünen tek bir rozete çeviriyor:
-// yeşil ✓ (good), kırmızı ▼ (bad), turuncu − (henüz işaretlenmedi). `animate:true`
-// SADECE kullanıcı az önce bu durumu seçtiğinde (dayEntry.js) geçiliyor — rozet
-// büyüyüp çiziliyor + bir halka patlıyor; weekSummary/weekSummaryDesktop gibi salt
-// geçmiş veri gösteren yerler hep `animate:false` (varsayılan) kullanıyor.
+// Egzersiz durumunu (good/bad/neutral/null) her yerde aynı görünen tek bir rozete
+// çeviriyor: yeşil ✓ (good), kırmızı ▼ (bad), turuncu − (kullanıcının GERÇEKTEN
+// seçtiği "fena değildi"). Hiç işaretlenmemiş (status null/undefined) durumda
+// HİÇBİR ŞEY dönmüyor — eskiden bu da aynı turuncu "−" ile gösteriliyordu, henüz
+// hiç dokunulmamış bir egzersizle gerçekten "fena değildi" diye işaretlenmiş bir
+// egzersiz ayırt edilemiyordu. `animate:true` SADECE kullanıcı az önce bu durumu
+// seçtiğinde (dayEntry.js) geçiliyor — rozet büyüyüp çiziliyor + bir halka
+// patlıyor; weekSummary/weekSummaryDesktop gibi salt geçmiş veri gösteren yerler
+// hep `animate:false` (varsayılan) kullanıyor.
 const STATUS_BADGE_PATHS = {
   good: 'M5 13l4 4L19 7',
   bad: 'M6 9l6 6 6-6',
@@ -75,6 +79,7 @@ const STATUS_BADGE_PATHS = {
 };
 
 export function statusBadge(status, animate = false) {
+  if (!status) return '';
   const key = status === 'good' ? 'good' : status === 'bad' ? 'bad' : 'neutral';
   const cls = `status-badge status-badge-${key}${animate ? ' status-badge-pop' : ''}`;
   const ring = animate ? '<span class="status-badge-ring"></span>' : '';
