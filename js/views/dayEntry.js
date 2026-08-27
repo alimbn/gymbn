@@ -190,6 +190,14 @@ function renderEntry(container, entry) {
       entry.workoutDurationSec = Math.round((Date.now() - entry.workoutStartedAt) / 1000);
       updateDayEntryField(entry.id, 'workoutDurationSec', entry.workoutDurationSec, false);
       renderWorkoutTimer();
+    } else if (!entry.completed && entry.workoutDurationSec) {
+      // Geri alınca kilitli süreyi siliyoruz — workoutStartedAt'a hiç dokunmuyoruz,
+      // böylece sayaç sıfırlanmadan, orijinal başlangıçtan kaldığı yerden akmaya
+      // devam ediyor. Yanlışlıkla erken "Tamamla"ya basılan bir günü kurtarmanın
+      // tek yolu bu — tekrar tamamlayınca aynı başlangıçtan doğru süre kaydediliyor.
+      entry.workoutDurationSec = null;
+      updateDayEntryField(entry.id, 'workoutDurationSec', null, false);
+      renderWorkoutTimer();
     }
     updateDayEntryField(entry.id, 'completed', entry.completed, false);
     updateCompleteBtn();
