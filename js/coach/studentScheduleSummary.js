@@ -1,17 +1,16 @@
 import { getStudent, getStudentAppState } from './coachCloud.js';
 import {
-  addDaysIso, dayOfWeekLabel, formatDateShortTr, formatDateLongTr, mondayOfWeek, todayIso,
-  escapeHtml, statusBadge, formatDuration,
+  addDaysIso, dayOfWeekLabel, formatDateShortTr, formatDateLongTr, escapeHtml, statusBadge, formatDuration,
+  setViewportZoomable,
 } from '../util.js';
 
-// weekSummary.js'in AYNI render mantığı (o zaten tamamen görüntüleme-amaçlı,
-// hiç düzenleme yok — soyulacak bir interaktiflik yoktu) — sadece veri kaynağı
-// storage.js'in yerel singleton'ı yerine uzaktan çekilen `state` parametresi,
-// üstüne week.js'in ‹/› hafta gezinmesi eklendi. formatPrescribed/formatActual
-// birebir kopya.
+// Öğrencinin kendi weekSummary.js'inin hoca-tarafı birebir kopyası — AYNI tam
+// açık (akordiyon değil) görüntüleme, sadece veri kaynağı uzaktan çekilen
+// `state`, üstüne studentSchedule.js'in (Takvim) ‹/› hafta gezinmesi eklendi.
+// Takvim'den "📄 Haftalık Özet" düğmesiyle buraya geliniyor, "←" ile geri dönülüyor.
 export async function render(container, { studentUid, mondayIso }) {
+  setViewportZoomable(true);
   renderLoadingScreen(container);
-  const monday = mondayIso || mondayOfWeek(todayIso());
 
   let student;
   let remoteState;
@@ -19,11 +18,11 @@ export async function render(container, { studentUid, mondayIso }) {
     [student, remoteState] = await Promise.all([getStudent(studentUid), getStudentAppState(studentUid)]);
   } catch (err) {
     console.error('Öğrenci verisi yüklenemedi', err);
-    renderErrorScreen(container, studentUid, 'Öğrenci verisi yüklenemedi, internet bağlantını kontrol edip tekrar dene.');
+    renderErrorScreen(container, 'Öğrenci verisi yüklenemedi, internet bağlantını kontrol edip tekrar dene.');
     return;
   }
   if (!student) {
-    renderErrorScreen(container, studentUid, 'Öğrenci bulunamadı.');
+    renderErrorScreen(container, 'Öğrenci bulunamadı.');
     return;
   }
 
@@ -31,22 +30,23 @@ export async function render(container, { studentUid, mondayIso }) {
   state.dayEntries = state.dayEntries || [];
   state.dayTypes = state.dayTypes || [];
   state.exercises = state.exercises || [];
-  renderScreen(container, studentUid, student, state, monday);
+  renderScreen(container, studentUid, student, state, mondayIso);
 }
 
 function renderLoadingScreen(container) {
   container.innerHTML = '<p class="empty-state">Yükleniyor…</p>';
 }
 
-function renderErrorScreen(container, studentUid, message) {
+function renderErrorScreen(container, message) {
   container.innerHTML = `
     <div class="view-header">
-      <a href="#/student/${studentUid}" class="back-link" aria-label="Geri">←</a>
-      <h2 class="view-title">Takvim</h2>
+      <button type="button" class="back-link" id="back-btn" aria-label="Geri">←</button>
+      <h2 class="view-title">Haftalık Özet</h2>
       <span></span>
     </div>
     <p class="empty-state">${escapeHtml(message)}</p>
   `;
+  container.querySelector('#back-btn').addEventListener('click', () => history.back());
 }
 
 function renderScreen(container, studentUid, student, state, mondayIso) {
@@ -64,38 +64,28 @@ function renderScreen(container, studentUid, student, state, mondayIso) {
 
   container.innerHTML = `
     <div class="view-header">
-      <a href="#/student/${studentUid}" class="back-link" aria-label="Geri">←</a>
-      <h2 class="view-title">${escapeHtml(student.displayName)}</h2>
+      <button type="button" class="back-link" id="back-btn" aria-label="Geri">←</button>
+      <h2 class="view-title">Haftalık Özet</h2>
       <span></span>
     </div>
+    <p class="view-subtitle">${escapeHtml(student.displayName)}</p>
     <div class="week-nav">
-      <a href="#/schedule/${studentUid}/${prevMonday}" class="btn-icon" aria-label="Önceki hafta">‹</a>
+      <a href="#/schedule/${studentUid}/${prevMonday}/summary" class="btn-icon" aria-label="Önceki hafta">‹</a>
       <div class="week-range">${formatDateShortTr(mondayIso)} – ${formatDateShortTr(days[6])}</div>
-      <a href="#/schedule/${studentUid}/${nextMonday}" class="btn-icon" aria-label="Sonraki hafta">›</a>
+      <a href="#/schedule/${studentUid}/${nextMonday}/summary" class="btn-icon" aria-label="Sonraki hafta">›</a>
     </div>
     <div class="summary-overview">
       <div class="summary-stat"><strong>${entries.length}</strong><span>gün antrenman</span></div>
       <div class="summary-stat good"><strong>${goodCount}</strong><span>✅ istenildiği gibi</span></div>
       <div class="summary-stat bad"><strong>${badCount}</strong><span>🔻 yapılamadı</span></div>
     </div>
-    <div class="summary-days summary-days-accordion" id="summary-days">
-      ${entries.length ? entries.map((e) => buildDaySummary(e, state)).join('') : '<p class="empty-state">Bu haftaya henüz program atanmadı.</p>'}
+    <div class="summary-days">
+      ${entries.length ? entries.map((e) => buildDaySummary(e, state)).join('') : '<p class="empty-state">Bu haftaya henüz kayıt eklenmedi.</p>'}
     </div>
-    ${entries.length ? `
-      <a href="#/schedule/${studentUid}/${mondayIso}/summary" class="btn btn-block week-summary-link">📄 Haftalık Özet</a>
-      <a href="#/schedule/${studentUid}/${mondayIso}/summary-desktop" class="btn btn-block week-summary-link">🖥️ Masaüstü Özeti</a>
-    ` : ''}
   `;
 
-  // Akordiyon: her girişte tam kapalı başlar (yeniden render'da sıfırlanıyor,
-  // ayrı bir state saklanmıyor), her gün BAĞIMSIZ açılıp kapanıyor — dayEntry.js'in
-  // egzersiz kartlarındaki "tek seferde bir tane" kuralının aksine, istenirse
-  // hepsi aynı anda açık kalabilir. Salt görüntüleme olduğu için (içeride hiçbir
-  // interaktif eleman yok) yeniden render yerine tek bir CSS sınıfı yeterli.
-  container.querySelector('#summary-days')?.addEventListener('click', (e) => {
-    const header = e.target.closest('.summary-day-header');
-    if (!header) return;
-    header.closest('.summary-day').classList.toggle('collapsed');
+  container.querySelector('#back-btn').addEventListener('click', () => {
+    history.back();
   });
 }
 
@@ -104,14 +94,12 @@ function buildDaySummary(entry, state) {
   const titleParts = [dt ? dt.name : null, entry.dayNumber ? `#${entry.dayNumber}` : null].filter(Boolean);
   const durationNote = entry.workoutDurationSec ? ` · ⏱ ${formatDuration(entry.workoutDurationSec)}` : '';
   return `
-    <div class="summary-day collapsed" data-date="${entry.date}">
+    <div class="summary-day">
       <div class="summary-day-header">
-        <span class="summary-day-header-left"><span class="accordion-chevron">▸</span>${dayOfWeekLabel(entry.date)} · ${formatDateShortTr(entry.date)}</span>
+        <span>${dayOfWeekLabel(entry.date)} · ${formatDateShortTr(entry.date)}</span>
         <span>${escapeHtml(titleParts.join(' · ') || 'Antrenman')}${entry.completed ? ' ✅' : ''}${durationNote}</span>
       </div>
-      <div class="summary-day-body">
-        ${entry.exercises.length ? entry.exercises.map((inst) => buildExerciseSummary(inst, state)).join('') : '<p class="empty-state">Egzersiz eklenmedi.</p>'}
-      </div>
+      ${entry.exercises.length ? entry.exercises.map((inst) => buildExerciseSummary(inst, state)).join('') : '<p class="empty-state">Egzersiz eklenmedi.</p>'}
     </div>
   `;
 }

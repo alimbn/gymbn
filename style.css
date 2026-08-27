@@ -2274,6 +2274,33 @@ a.list-item {
   border-bottom: 1px solid var(--border);
 }
 
+.summary-day-header-left {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+/* Hocanın Takvim ekranına ÖZEL akordiyon davranışı — .summary-day/-header,
+   öğrencinin kendi Haftalık/Masaüstü Özeti'nde de aynı isimlerle kullanılıyor
+   ama hep tam açık, akordiyon değil; bu yüzden kurallar `.summary-days-accordion`
+   üst sınıfına sıkı sıkıya bağlı, o sınıf olmayan hiçbir yeri etkilemiyor. */
+.summary-days-accordion .summary-day-header {
+  cursor: pointer;
+}
+
+.summary-days-accordion .accordion-chevron {
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+
+.summary-days-accordion .summary-day:not(.collapsed) .accordion-chevron {
+  transform: rotate(90deg);
+}
+
+.summary-days-accordion .summary-day.collapsed .summary-day-body {
+  display: none;
+}
+
 .summary-exercise {
   padding: var(--space-2) 0;
 }
