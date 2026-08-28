@@ -1,6 +1,6 @@
 import { renderRosterScreen } from '../roster/rosterUi.js';
 import {
-  listCoachesWithCounts, listPendingCoachInvites, createCoachInvite, cancelCoachInvite,
+  listCoachesWithCounts, listPendingCoachInvites, createCoachInvite, cancelCoachInvite, setCoachCatalogPermission,
 } from './adminCloud.js';
 
 function buildInviteLink(token) {
@@ -23,6 +23,9 @@ export async function render(container) {
           id: c.id,
           title: c.displayName,
           subtitle: `${c.studentCount} öğrenci`,
+          // Güvendiğin hocaya, admin'in "Egzersiz Kütüphanesi" ekranındaki AYNI
+          // yazma iznini ver — ayrı bir liste değil, aynı paylaşılan katalog.
+          toggle: { label: 'Kütüphane', value: c.canManageCatalog === true },
         }));
     },
     loadPendingInvites: async () => {
@@ -31,5 +34,6 @@ export async function render(container) {
     },
     onAdd: async (name) => ({ link: buildInviteLink(await createCoachInvite(name)) }),
     onCancelInvite: (id) => cancelCoachInvite(id),
+    onToggle: (id, allowed) => setCoachCatalogPermission(id, allowed),
   });
 }

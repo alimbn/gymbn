@@ -1,14 +1,18 @@
 import { escapeHtml, ICON_TRASH, ICON_MEDIA } from '../util.js';
 import { confirmSheet } from '../components/confirmSheet.js';
-import {
-  listCatalog, addCatalogExercise, renameCatalogExercise, setCatalogDuration, setCatalogMedia, archiveCatalogExercise,
-  listRegions,
-} from './adminCloud.js';
 
 // libraryList.js'in aynı görsel/etkileşim dili — sadece veri kaynağı yerel
 // storage.js yerine ortak exerciseCatalog koleksiyonu (async Firestore).
-// Hoca'nın hiç yazamadığı tek yer burası; assignProgram.js sadece okuyor.
-export async function render(container, { onBack }) {
+// Varsayılan olarak admin'in tek yazabildiği yer burasıydı; artık admin'in
+// canManageCatalog toggle'ıyla izin verdiği bir hoca da AYNI bu ekranı
+// kullanabiliyor — o yüzden Firestore fonksiyonları burada sabit import
+// DEĞİL, çağıranın (adminApp.js veya coachApp.js) geçtiği parametreler:
+// hangi app'in oturumunu (izole admin app'i mi, coach'un paylaşılan
+// oturumu mu) kullanacağını çağıran belirliyor, bu dosya hiç bilmiyor.
+export async function render(container, {
+  onBack, listCatalog, addCatalogExercise, renameCatalogExercise, setCatalogDuration, setCatalogMedia,
+  archiveCatalogExercise, listRegions,
+}) {
   container.innerHTML = `
     <div class="view-header">
       <button type="button" class="back-link" id="catalog-back-btn" aria-label="Geri">←</button>

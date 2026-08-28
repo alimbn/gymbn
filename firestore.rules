@@ -28,6 +28,14 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/students/$(request.auth.uid))
         && get(/databases/$(database)/documents/students/$(request.auth.uid)).data.coachId == coachUid;
     }
+    // Admin, güvendiği belirli bir hocaya (kendi coaches/{uid} dokümanındaki bir
+    // bayrakla, toggle'la açılıp kapanan) paylaşılan egzersiz kataloğunu YAZMA
+    // izni verebiliyor — .get(...,false) eski/hiç ayarlanmamış hocalarda alan
+    // yoksa hata fırlatmak yerine sessizce false dönüyor.
+    function canManageCatalog() {
+      return isCoach()
+        && get(/databases/$(database)/documents/coaches/$(request.auth.uid)).data.get('canManageCatalog', false) == true;
+    }
 
     // ---- Mevcut kullanıcı verisi: DEĞİŞMEDİ, sadece bir OR ile genişledi ----
     // request.auth.uid == userId satırı hiç dokunulmadan aynı kaldı; isCoachOfStudent
@@ -55,7 +63,10 @@ service cloud.firestore {
         && request.auth.uid == coachUid
         && request.resource.data.inviteToken is string
         && get(/databases/$(database)/documents/coachInvites/$(request.resource.data.inviteToken)).data.status == 'pending';
-      allow update, delete: if false;
+      // Admin'in "Egzersiz Kütüphanesi" toggle'ı için tek, dar bir istisna — SADECE
+      // canManageCatalog alanını değiştirebiliyor, başka hiçbir alanı değiştiremez.
+      allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['canManageCatalog']);
+      allow delete: if false;
     }
 
     // ---- coachInvites: admin oluşturur, token bilen HERKES (auth'suz) 'get' edebilir
@@ -106,19 +117,23 @@ service cloud.firestore {
     }
 
     // ---- exerciseCatalog: tüm hocalar+öğrenciler arasında paylaşılan tek egzersiz
-    // listesi (video linki + hedef bölge). Hoca sadece OKUR (program atarken seçim
-    // listesi için) — yeni kayıt/düzenleme/silme YALNIZCA admin'de, hoca hiç yazamaz. ----
+    // listesi (video linki + hedef bölge). Hoca normalde sadece OKUR (program
+    // atarken seçim listesi için) — yeni kayıt/düzenleme/silme varsayılan olarak
+    // YALNIZCA admin'de; admin'in canManageCatalog toggle'ıyla güvendiği belirli
+    // hocalara da AYNI yazma izni verilebiliyor (bkz. canManageCatalog()). ----
     match /exerciseCatalog/{exerciseId} {
       allow get, list: if isCoach() || isAdmin() || isManagedStudent();
-      allow create, update, delete: if isAdmin();
+      allow create, update, delete: if isAdmin() || canManageCatalog();
     }
 
-    // ---- targetRegions: hedef bölge listesi, tamamen admin'in yönettiği ayrı bir
-    // koleksiyon. Hoca'nın buna hiç erişimi yok — sadece admin, egzersiz kataloğunu
-    // etiketlerken kullanıyor (seçilen bölgeler {name,color} olarak kataloğa
-    // kopyalanıyor, dayEntry.js hiçbir zaman bu koleksiyona bakmıyor). ----
+    // ---- targetRegions: hedef bölge listesi, admin'in yönettiği ayrı bir koleksiyon.
+    // Bölge LİSTESİNİ (ekleme/yeniden adlandırma/arşivleme) hâlâ sadece admin
+    // yönetiyor — ama canManageCatalog izni verilen bir hoca, egzersiz kataloğundaki
+    // video/hedef-bölge sheet'inin çip listesini doldurmak için bu listeyi OKUYABİLMELİ,
+    // yoksa o ekran o hoca için boş/kırık görünür. ----
     match /targetRegions/{regionId} {
-      allow get, list, create, update, delete: if isAdmin();
+      allow get, list: if isAdmin() || canManageCatalog();
+      allow create, update, delete: if isAdmin();
     }
 
     // ---- notifications: uygulama içi bildirim. Alıcı SADECE kendi bildirimlerini

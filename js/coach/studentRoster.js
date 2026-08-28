@@ -1,7 +1,7 @@
 import { renderRosterScreen } from '../roster/rosterUi.js';
 import {
   listMyStudents, listPendingStudentInvites, createStudentInvite, cancelStudentInvite, coachSignOut,
-  getStudentAppState, listMyNotifications, markNotificationRead,
+  getStudentAppState, listMyNotifications, markNotificationRead, canManageCatalog,
 } from './coachCloud.js';
 import { cycleStatus } from './paymentCycle.js';
 import { formatDateShortTr } from '../util.js';
@@ -44,6 +44,7 @@ export async function render(container) {
       <h2 class="view-title">Öğrenciler</h2>
       <div class="view-header-actions" id="header-actions"></div>
     </div>
+    <a class="more-menu-item" id="catalog-link" href="#/catalog" style="display:none; margin-bottom:var(--space-3);"><span>📋 Egzersiz Kütüphanesi</span><span class="chevron">›</span></a>
     <div id="coach-body"></div>
   `;
   const headerActions = container.querySelector('#header-actions');
@@ -53,6 +54,13 @@ export async function render(container) {
   });
   headerActions.insertAdjacentHTML('beforeend', '<a href="./index.html" class="btn btn-ghost">Kendi Antrenmanım</a><button type="button" class="btn btn-ghost" id="coach-signout-btn">Çıkış</button>');
   container.querySelector('#coach-signout-btn').addEventListener('click', () => coachSignOut());
+
+  canManageCatalog().then((allowed) => {
+    if (!allowed) return;
+    const linkEl = container.querySelector('#catalog-link');
+    if (!linkEl) return; // kullanıcı bu sırada başka ekrana geçmiş olabilir
+    linkEl.style.display = '';
+  });
 
   await renderRosterScreen(container.querySelector('#coach-body'), {
     addPlaceholder: 'Öğrenci adı',

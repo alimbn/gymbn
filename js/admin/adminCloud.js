@@ -38,6 +38,12 @@ export async function listCoachesWithCounts() {
   }));
 }
 
+// Admin'in coach roster'ındaki toggle'ı için — SADECE bu tek alanı değiştiriyor
+// (firestore.rules'taki dar update kuralı zaten başka bir alana izin vermiyor).
+export async function setCoachCatalogPermission(coachUid, allowed) {
+  await setDoc(doc(db, 'coaches', coachUid), { canManageCatalog: !!allowed }, { merge: true });
+}
+
 export async function listPendingCoachInvites() {
   const snap = await getDocs(query(collection(db, 'coachInvites'), where('status', '==', 'pending')));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));

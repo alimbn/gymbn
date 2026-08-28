@@ -1,4 +1,8 @@
-import { onCoachAuthReady, coachLogin, coachSignOut, coachResetPassword, isCurrentUserCoach } from './coach/coachCloud.js';
+import {
+  onCoachAuthReady, coachLogin, coachSignOut, coachResetPassword, isCurrentUserCoach,
+  listCatalog, addCatalogExercise, renameCatalogExercise, setCatalogDuration, setCatalogMedia, archiveCatalogExercise,
+  listRegions,
+} from './coach/coachCloud.js';
 import { renderLoginForm } from './shared/loginForm.js';
 import { addRoute, renderRoute } from './router.js';
 import * as studentRoster from './coach/studentRoster.js';
@@ -9,6 +13,7 @@ import * as studentPayments from './coach/studentPayments.js';
 import * as studentSchedule from './coach/studentSchedule.js';
 import * as studentScheduleSummary from './coach/studentScheduleSummary.js';
 import * as studentScheduleSummaryDesktop from './coach/studentScheduleSummaryDesktop.js';
+import * as exerciseCatalog from './admin/exerciseCatalog.js';
 
 const viewRoot = document.getElementById('view-root');
 
@@ -74,6 +79,16 @@ function initCoachApp() {
   addRoute(/^#\/schedule\/([^/]+)(?:\/([^/]+))?$/, (root, match) => studentSchedule.render(root, { studentUid: match[1], mondayIso: match[2] }));
   addRoute(/^#\/schedule\/([^/]+)\/([^/]+)\/summary$/, (root, match) => studentScheduleSummary.render(root, { studentUid: match[1], mondayIso: match[2] }));
   addRoute(/^#\/schedule\/([^/]+)\/([^/]+)\/summary-desktop$/, (root, match) => studentScheduleSummaryDesktop.render(root, { studentUid: match[1], mondayIso: match[2] }));
+  // admin'in canManageCatalog toggle'ıyla izin verdiği hocalar için — admin.html'in
+  // AYNI exerciseCatalog.js ekranı, sadece Firestore fonksiyonları coachCloud.js'ten
+  // (kendi paylaşılan oturumuyla). İzinsiz bir hoca buraya URL'i elle yazsa bile
+  // firestore.rules'taki canManageCatalog() yazmayı reddeder — bu route sadece
+  // linki gösterip göstermemeyi kontrol ediyor, gerçek yetki sunucu tarafında.
+  addRoute(/^#\/catalog$/, (root) => exerciseCatalog.render(root, {
+    onBack: () => { location.hash = '#/'; },
+    listCatalog, addCatalogExercise, renameCatalogExercise, setCatalogDuration, setCatalogMedia, archiveCatalogExercise,
+    listRegions,
+  }));
 
   function onRouteChange() {
     renderRoute(viewRoot);

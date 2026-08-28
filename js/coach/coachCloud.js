@@ -81,11 +81,65 @@ export async function setStudentAppState(studentUid, state) {
   await setDoc(doc(db, 'users', studentUid, 'data', 'main'), { ...state, updatedAt: serverTimestamp() });
 }
 
-// Ortak egzersiz kataloğu — salt okunur (bkz. firestore.rules: hoca sadece get/list
-// yapabiliyor). Yazma/etiketleme sadece admin ekranından, adminCloud.js'te.
+// Ortak egzersiz kataloğu — varsayılan olarak salt okunur (assignProgram.js/
+// bulkAdd.js bunu kullanıyor). Admin'in canManageCatalog toggle'ıyla izin
+// verdiği hocalar için YAZMA fonksiyonları da aşağıda — adminCloud.js'teki
+// birebir aynıları, sadece bu dosyanın kendi `db`'siyle (bkz. dosya başı).
 export async function listCatalog() {
   const snap = await getDocs(collection(db, 'exerciseCatalog'));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((e) => !e.archived);
+}
+
+// Ayarlar/roster ekranındaki "Egzersiz Kütüphanesi" linkinin görünüp
+// görünmeyeceğini belirlemek için — admin izin vermediyse sessizce false.
+export async function canManageCatalog() {
+  const user = auth.currentUser;
+  if (!user) return false;
+  try {
+    const snap = await getDoc(doc(db, 'coaches', user.uid));
+    return snap.exists() && snap.data().canManageCatalog === true;
+  } catch (err) {
+    console.error('Katalog yetkisi kontrol edilemedi', err);
+    return false;
+  }
+}
+
+export async function addCatalogExercise(name, isDuration = false) {
+  const id = crypto.randomUUID();
+  await setDoc(doc(db, 'exerciseCatalog', id), {
+    name: name.trim(),
+    videoUrl: '',
+    targetRegions: [],
+    isDuration: !!isDuration,
+    archived: false,
+    createdAt: serverTimestamp(),
+  });
+  return id;
+}
+
+export async function renameCatalogExercise(id, name) {
+  await setDoc(doc(db, 'exerciseCatalog', id), { name: name.trim() }, { merge: true });
+}
+
+export async function setCatalogDuration(id, isDuration) {
+  await setDoc(doc(db, 'exerciseCatalog', id), { isDuration: !!isDuration }, { merge: true });
+}
+
+export async function setCatalogMedia(id, { videoUrl, targetRegions }) {
+  await setDoc(doc(db, 'exerciseCatalog', id), { videoUrl: videoUrl || '', targetRegions: targetRegions || [] }, { merge: true });
+}
+
+export async function archiveCatalogExercise(id) {
+  await setDoc(doc(db, 'exerciseCatalog', id), { archived: true }, { merge: true });
+}
+
+// targetRegions: liste hâlâ SADECE admin'de yönetiliyor (ekleme/yeniden adlandırma/
+// arşivleme), ama canManageCatalog izni verilen bir hoca video/hedef-bölge sheet'inin
+// çip listesini doldurmak için bu koleksiyonu OKUYABİLMELİ — yoksa o sheet o hoca için
+// boş/kırık görünür (bkz. firestore.rules).
+export async function listRegions() {
+  const snap = await getDocs(collection(db, 'targetRegions'));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((r) => !r.archived).sort((a, b) => a.name.localeCompare(b.name, 'tr'));
 }
 
 /* ---------- Uygulama içi bildirimler ---------- */

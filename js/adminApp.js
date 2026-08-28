@@ -1,4 +1,8 @@
-import { onAdminAuthReady, adminLogin, adminSignOut, adminResetPassword, isCurrentUserAdmin } from './admin/adminCloud.js';
+import {
+  onAdminAuthReady, adminLogin, adminSignOut, adminResetPassword, isCurrentUserAdmin,
+  listCatalog, addCatalogExercise, renameCatalogExercise, setCatalogDuration, setCatalogMedia, archiveCatalogExercise,
+  listRegions,
+} from './admin/adminCloud.js';
 import { renderLoginForm } from './shared/loginForm.js';
 import * as coachRoster from './admin/coachRoster.js';
 import * as exerciseCatalog from './admin/exerciseCatalog.js';
@@ -87,7 +91,11 @@ function showRoster() {
 }
 
 function showCatalog() {
-  exerciseCatalog.render(viewRoot, { onBack: showRoster });
+  exerciseCatalog.render(viewRoot, {
+    onBack: showRoster,
+    listCatalog, addCatalogExercise, renameCatalogExercise, setCatalogDuration, setCatalogMedia, archiveCatalogExercise,
+    listRegions,
+  });
 }
 
 function showRegions() {

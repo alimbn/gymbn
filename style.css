@@ -587,6 +587,21 @@ input:focus, select:focus, textarea:focus {
   flex-shrink: 0;
 }
 
+/* Roster satırındaki opsiyonel izin anahtarı (ör. admin'in hoca listesindeki
+   "Kütüphane" toggle'ı) — rosterUi.js'in item.toggle hook'u, opt-in. */
+.list-item-toggle-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.list-item-toggle-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 a.list-item {
   text-decoration: none;
   color: inherit;
