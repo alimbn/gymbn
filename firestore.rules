@@ -142,9 +142,14 @@ service cloud.firestore {
     // yazılamıyor. Update sadece `read` alanını değiştirebiliyor. Silme yok (v1). ----
     match /notifications/{notifId} {
       allow get, list: if isSignedIn() && resource.data.recipientUid == request.auth.uid;
+      // isAdmin() OR'u SADECE admin'in "Sistem Mesajı Gönder" özelliği için —
+      // admin'in coach↔öğrenci ilişkisi yok, bu yüzden hedef HERHANGİ bir uid
+      // olabiliyor (tüm coaches+students'a tek tek yazıyor, bkz. adminCloud.js'in
+      // broadcastSystemMessage'ı). Mevcut iki dal (isCoachOfStudent/isMyCoach)
+      // hiç dokunulmadı.
       allow create: if isSignedIn()
         && request.resource.data.senderUid == request.auth.uid
-        && (isCoachOfStudent(request.resource.data.recipientUid) || isMyCoach(request.resource.data.recipientUid));
+        && (isCoachOfStudent(request.resource.data.recipientUid) || isMyCoach(request.resource.data.recipientUid) || isAdmin());
       allow update: if isSignedIn()
         && resource.data.recipientUid == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);

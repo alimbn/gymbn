@@ -6,6 +6,7 @@ const TYPE_META = {
   program_assigned: '📋',
   workout_started: '▶',
   workout_completed: '✅',
+  system_message: '📢',
 };
 
 function timeAgoTr(date) {

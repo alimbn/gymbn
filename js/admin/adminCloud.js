@@ -3,7 +3,7 @@ import {
   onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail,
 } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 import {
-  doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs, getCountFromServer, serverTimestamp,
+  doc, getDoc, setDoc, deleteDoc, addDoc, collection, query, where, getDocs, getCountFromServer, serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
 
 export function onAdminAuthReady(callback) {
@@ -62,6 +62,33 @@ export async function createCoachInvite(displayName) {
 
 export async function cancelCoachInvite(token) {
   await deleteDoc(doc(db, 'coachInvites', token));
+}
+
+// ---- Sistem Mesajı: admin'in tüm hocalara+öğrencilere aynı anda tek yönlü bir
+// duyuru göndermesi (ör. "bugün şunlar değişti"). Var olan bildirim sistemi
+// (notifications/{id}, bkz. coachCloud.js'in notifyStudent'ı) hoca↔öğrenci
+// ilişkisine göre hedefli — admin'in HERKESE ulaşabilmesi için firestore.rules'a
+// dar bir isAdmin() istisnası eklendi, mevcut iki dal (coach→öğrenci,
+// öğrenci→hoca) hiç değişmedi. Batch yerine Promise.allSettled kullanıyoruz:
+// biri (silinmiş/bozuk bir hesap yüzünden) başarısız olursa diğerleri yine de
+// ulaşsın istiyoruz, tek bir atomik yazım burada gerekli değil. ----
+export async function broadcastSystemMessage(message) {
+  const [coachSnap, studentSnap] = await Promise.all([
+    getDocs(collection(db, 'coaches')),
+    getDocs(collection(db, 'students')),
+  ]);
+  const recipientUids = [...new Set([...coachSnap.docs.map((d) => d.id), ...studentSnap.docs.map((d) => d.id)])];
+  const senderUid = auth.currentUser.uid;
+  const results = await Promise.allSettled(recipientUids.map((recipientUid) => addDoc(collection(db, 'notifications'), {
+    recipientUid,
+    senderUid,
+    type: 'system_message',
+    message,
+    read: false,
+    createdAt: serverTimestamp(),
+  })));
+  const failed = results.filter((r) => r.status === 'rejected').length;
+  return { total: recipientUids.length, failed };
 }
 
 // ---- exerciseCatalog: hocalar+öğrenciler arasında paylaşılan tek egzersiz listesi.
