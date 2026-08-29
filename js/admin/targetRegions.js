@@ -139,9 +139,9 @@ export async function render(container, { onBack }) {
     const row = e.target.closest('.list-item');
     if (!row) return;
     const item = items.find((it) => it.id === row.dataset.id);
-    if (e.target.classList.contains('edit-btn')) {
+    if (e.target.closest('.edit-btn')) {
       enterEdit(row);
-    } else if (e.target.classList.contains('delete-btn')) {
+    } else if (e.target.closest('.delete-btn')) {
       const name = row.querySelector('.view-mode').textContent;
       if (await confirmSheet(`"${name}" silinsin mi? Bu bölge daha önce etiketlenmiş egzersizlerde kalmaya devam eder.`)) {
         try {

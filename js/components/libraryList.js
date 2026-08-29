@@ -78,15 +78,15 @@ export function renderLibraryList(container, { title, store, placeholder, backHr
   listRoot.addEventListener('click', async (e) => {
     const row = e.target.closest('.list-item');
     if (!row) return;
-    if (e.target.classList.contains('edit-btn')) {
+    if (e.target.closest('.edit-btn')) {
       enterEdit(row);
-    } else if (e.target.classList.contains('delete-btn')) {
+    } else if (e.target.closest('.delete-btn')) {
       const name = row.querySelector('.view-mode').textContent;
       if (await confirmSheet(`"${name}" silinsin mi?`)) {
         store.archive(row.dataset.id);
         renderItems();
       }
-    } else if (e.target.classList.contains('duration-toggle-btn')) {
+    } else if (e.target.closest('.duration-toggle-btn')) {
       const item = store.byId(row.dataset.id);
       store.setDuration(row.dataset.id, !item.isDuration);
       renderItems();

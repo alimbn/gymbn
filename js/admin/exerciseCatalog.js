@@ -152,9 +152,9 @@ export async function render(container, {
     const row = e.target.closest('.list-item');
     if (!row) return;
     const item = items.find((it) => it.id === row.dataset.id);
-    if (e.target.classList.contains('edit-btn')) {
+    if (e.target.closest('.edit-btn')) {
       enterEdit(row);
-    } else if (e.target.classList.contains('delete-btn')) {
+    } else if (e.target.closest('.delete-btn')) {
       const name = row.querySelector('.view-mode').textContent;
       if (await confirmSheet(`"${name}" silinsin mi?`)) {
         try {
@@ -166,7 +166,7 @@ export async function render(container, {
           alert('Egzersiz silinemedi, internet bağlantını kontrol edip tekrar dene.');
         }
       }
-    } else if (e.target.classList.contains('duration-toggle-btn')) {
+    } else if (e.target.closest('.duration-toggle-btn')) {
       item.isDuration = !item.isDuration;
       renderItems();
       try {

@@ -97,7 +97,7 @@ export function render(container) {
 
   listEl.addEventListener('click', async (e) => {
     const row = e.target.closest('.list-item');
-    if (!row || !e.target.classList.contains('delete-btn')) return;
+    if (!row || !e.target.closest('.delete-btn')) return;
     if (await confirmSheet('Bu ödeme kaydı silinsin mi?')) {
       deletePayment(row.dataset.id);
       renderSummary();
