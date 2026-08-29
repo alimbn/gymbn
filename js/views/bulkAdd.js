@@ -3,7 +3,7 @@ import {
   addExerciseInstanceWithPrescribed, updateDayEntryField,
 } from '../storage.js';
 import {
-  normalizeForMatch, addDaysIso, mondayOfWeek, todayIso, escapeHtml, formatDateShortTr,
+  normalizeForMatch, addDaysIso, mondayOfWeek, todayIso, escapeHtml, formatDateShortTr, statusBadge,
 } from '../util.js';
 import { parseWeeklyProgramText } from '../bulkParse.js';
 import { confirmSheet } from '../components/confirmSheet.js';
@@ -116,6 +116,7 @@ function buildBlocksFromExistingWeek(catalog, weekMonday) {
           reps: inst.prescribed.reps ?? '',
           rir: inst.prescribed.rir ?? '',
           coachNote: inst.prescribed.coachNote || '',
+          lastTime: buildLastTimeInfo(inst, exercise),
         };
         if (!catalog) return { ...base, name: exercise ? exercise.name : '' };
         const parsedName = exercise ? exercise.name : '';
@@ -134,6 +135,30 @@ function buildBlocksFromExistingWeek(catalog, weekMonday) {
       }),
     };
   });
+}
+
+// assignProgram.js'teki buildLastTimeInfo'nun AYNI mantığı — bkz. oradaki yorum.
+function buildLastTimeInfo(inst, exercise) {
+  const touched = inst.actualSets.filter((s) => s.touched);
+  if (!touched.length) return null;
+  const isDuration = !!(exercise && exercise.isDuration);
+  return {
+    summary: summarizeActualSets(touched, isDuration),
+    note: inst.note || '',
+    status: inst.status || null,
+  };
+}
+
+function summarizeActualSets(touchedSets, isDuration) {
+  const unit = isDuration ? 'sn' : 'tekrar';
+  const weight = joinUnique(touchedSets.map((s) => s.weight || '-'));
+  const reps = touchedSets.map((s) => s.reps || '-').join(',');
+  return weight && weight !== '-' ? `${weight} × ${reps} ${unit}` : `${reps} ${unit}`;
+}
+
+function joinUnique(values) {
+  const unique = [...new Set(values)];
+  return unique.length === 1 ? unique[0] : values.join('/');
 }
 
 function enrichBlock(block, catalog) {
@@ -458,6 +483,9 @@ function buildExerciseRow(ex, block, exList, catalog) {
         <button type="button" class="bulk-picker-trigger${ex.rir === '' ? ' empty' : ''}" data-field="rir">${escapeHtml(fieldDisplay(ex.rir))}</button>
       </div>
     </div>
+    ${ex.lastTime ? `
+      <div class="bulk-ex-last-time">${statusBadge(ex.lastTime.status)}Geçen sefer: ${escapeHtml(ex.lastTime.summary)}${ex.lastTime.note ? ` — <span class="bulk-ex-last-time-note">"${escapeHtml(ex.lastTime.note)}"</span>` : ''}</div>
+    ` : ''}
     <input type="text" class="bulk-ex-note" value="${escapeHtml(ex.coachNote)}" placeholder="Hoca notu (opsiyonel)">
   `;
 

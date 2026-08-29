@@ -1,4 +1,4 @@
-import { normalizeForMatch, addDaysIso, mondayOfWeek, todayIso, escapeHtml, formatDateShortTr } from '../util.js';
+import { normalizeForMatch, addDaysIso, mondayOfWeek, todayIso, escapeHtml, formatDateShortTr, statusBadge } from '../util.js';
 import { parseWeeklyProgramText } from '../bulkParse.js';
 import { getStudent, getStudentAppState, setStudentAppState, listCatalog, getMyCoachProfile, notifyStudent } from './coachCloud.js';
 import { confirmSheet } from '../components/confirmSheet.js';
@@ -367,10 +367,43 @@ function buildBlocksFromExistingWeek(state, catalog, weekMonday) {
           reps: inst.prescribed.reps ?? '',
           rir: inst.prescribed.rir ?? '',
           coachNote: inst.prescribed.coachNote || '',
+          lastTime: buildLastTimeInfo(inst, exercise),
         };
       }),
     };
   });
+}
+
+// Kopyalanan hafta sadece HOCANIN o zaman istediğini (prescribed) taşırsa,
+// öğrencinin gerçekte ne yaptığını hiç görmeden aynı sayılar ileri kopyalanabilir
+// — ör. hoca 5 tekrar istemiş ama öğrenci 3 yapıp not düşmüşse, bunu görmeden
+// tekrar 5 atamak yanlış olur. Bu yüzden salt-bilgilendirme amaçlı, DÜZENLENEMEZ
+// bir "geçen sefer gerçekte ne oldu" özeti de taşınıyor (review ekranında her
+// zaman görünür, ama commitBlocks hâlâ SADECE editable prescribed alanları
+// kaydediyor — bu obje hiç oraya gitmiyor). Hiç set işaretlenmemişse (hâlâ
+// prescribed'dan kopya varsayılan değerler) gösterecek gerçek bir şey yok, null
+// dönüyor.
+function buildLastTimeInfo(inst, exercise) {
+  const touched = inst.actualSets.filter((s) => s.touched);
+  if (!touched.length) return null;
+  const isDuration = !!(exercise && exercise.isDuration);
+  return {
+    summary: summarizeActualSets(touched, isDuration),
+    note: inst.note || '',
+    status: inst.status || null,
+  };
+}
+
+function summarizeActualSets(touchedSets, isDuration) {
+  const unit = isDuration ? 'sn' : 'tekrar';
+  const weight = joinUnique(touchedSets.map((s) => s.weight || '-'));
+  const reps = touchedSets.map((s) => s.reps || '-').join(',');
+  return weight && weight !== '-' ? `${weight} × ${reps} ${unit}` : `${reps} ${unit}`;
+}
+
+function joinUnique(values) {
+  const unique = [...new Set(values)];
+  return unique.length === 1 ? unique[0] : values.join('/');
 }
 
 function enrichBlock(block, state, catalog) {
@@ -545,6 +578,9 @@ function buildExerciseRow(ex, block, exList, catalog) {
         <button type="button" class="bulk-picker-trigger${ex.rir === '' ? ' empty' : ''}" data-field="rir">${escapeHtml(fieldDisplay(ex.rir))}</button>
       </div>
     </div>
+    ${ex.lastTime ? `
+      <div class="bulk-ex-last-time">${statusBadge(ex.lastTime.status)}Geçen sefer: ${escapeHtml(ex.lastTime.summary)}${ex.lastTime.note ? ` — <span class="bulk-ex-last-time-note">"${escapeHtml(ex.lastTime.note)}"</span>` : ''}</div>
+    ` : ''}
     <input type="text" class="bulk-ex-note" value="${escapeHtml(ex.coachNote)}" placeholder="Hoca notu (opsiyonel)">
   `;
 

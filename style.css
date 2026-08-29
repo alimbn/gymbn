@@ -2021,6 +2021,35 @@ a.list-item {
   padding: 8px 10px;
 }
 
+/* Program kopyalarken, hocanın o gün için hedeflediği (prescribed) değerlerin
+   yanında öğrencinin GERÇEKTE ne yaptığını da her zaman görünür tutuyor — hoca
+   bunu görmeden aynı sayıları körlemesine ileri kopyalamasın diye (bkz.
+   buildLastTimeInfo). Hiç set işaretlenmemiş egzersizlerde bu satır hiç
+   basılmıyor, gösterecek gerçek bir veri yok çünkü. */
+.bulk-ex-last-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--text-muted);
+  margin: 2px 0 var(--space-2);
+}
+
+.bulk-ex-last-time .status-badge {
+  width: 15px;
+  height: 15px;
+}
+
+.bulk-ex-last-time .status-badge svg {
+  width: 8px;
+  height: 8px;
+}
+
+.bulk-ex-last-time-note {
+  color: var(--text-muted);
+}
+
 /* Ağırlık/Set/Tekrar/Rir'in üstünde kalıcı etiket — dayEntry.js'in "Hoca" bloğundaki
    aynı fikir (değer girilince placeholder'ın kaybolup hangi alan olduğunu belirsiz
    bırakması sorununu çözüyor), ama görsel olarak bu ekranın kendi kutulu input
