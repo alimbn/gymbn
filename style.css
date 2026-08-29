@@ -269,6 +269,7 @@ button {
 .notif-text {
   font-size: 13.5px;
   line-height: 1.4;
+  white-space: pre-line;
 }
 
 .notif-time {
