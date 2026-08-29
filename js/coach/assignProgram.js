@@ -330,10 +330,16 @@ function findMostRecentSourceWeek(state, beforeMonday) {
 // Kaynak haftanın (findMostRecentSourceWeek'in bulduğu) GERÇEK (kayıtlı)
 // günlerini, enrichBlock()'un ayrıştırılmış metinden ürettiğiyle AYNI şekle
 // çeviriyor — önizleme ekranı ikisi arasındaki farkı hiç bilmiyor. Egzersizsiz
-// (boş/dinlenme) günler atlanıyor, kopyalanacak bir şey yok çünkü. catalogId hep
-// exercise.sourceCatalogId'den geliyor (bkz. resolveLocalExercise) — eski,
-// kataloğa hiç bağlanmamış bir kayıt varsa catalogId null kalır, önizlemede
-// "eşleşme yok" olarak normal şekilde işleniyor.
+// (boş/dinlenme) günler atlanıyor, kopyalanacak bir şey yok çünkü.
+// Önce exercise.sourceCatalogId ile ID üzerinden eşleştirmeyi deniyoruz (bkz.
+// resolveLocalExercise) — bu en sağlam yol, kataloğun ismi sonradan değişse
+// bile kırılmıyor. AMA bu alan hiç set edilmemiş (kataloğa hiç bağlanmamadan
+// önce eklenmiş eski bir kayıt) ya da işaret ettiği katalog girdisi artık
+// arşivlenmiş/silinmiş olabilir — o durumda enrichBlock()'un yapıştırılan metin
+// için zaten yaptığı AYNI isim eşleştirmesine (normalizeForMatch) düşüyoruz:
+// kopyalanan hafta, aynı metni elle yapıştırmaktan daha az şansa sahip olmasın.
+// İkisi de bulamazsa (isim de kataloğa uymuyorsa) önizlemede normal şekilde
+// "eşleşme yok" olarak işleniyor.
 function buildBlocksFromExistingWeek(state, catalog, weekMonday) {
   const weekDates = Array.from({ length: 7 }, (_, i) => addDaysIso(weekMonday, i));
   const entries = weekDates.map((d) => findDayEntryByDate(state, d)).filter((e) => e && e.exercises.length);
@@ -345,12 +351,17 @@ function buildBlocksFromExistingWeek(state, catalog, weekMonday) {
       assignedDate: null,
       exercises: entry.exercises.map((inst) => {
         const exercise = state.exercises.find((e) => e.id === inst.exerciseId);
-        const catalogId = exercise?.sourceCatalogId || null;
-        const catalogMatch = catalogId ? catalog.find((c) => c.id === catalogId) : null;
+        const parsedName = exercise ? exercise.name : '';
+        const sourceCatalogId = exercise?.sourceCatalogId || null;
+        let catalogMatch = sourceCatalogId ? catalog.find((c) => c.id === sourceCatalogId) : null;
+        if (!catalogMatch) {
+          const normalizedName = normalizeForMatch(parsedName);
+          catalogMatch = catalog.find((c) => normalizeForMatch(c.name) === normalizedName) || null;
+        }
         return {
-          name: catalogMatch ? catalogMatch.name : (exercise ? exercise.name : ''),
-          parsedName: exercise ? exercise.name : '',
-          catalogId,
+          name: catalogMatch ? catalogMatch.name : parsedName,
+          parsedName,
+          catalogId: catalogMatch ? catalogMatch.id : null,
           weight: inst.prescribed.weight || '',
           setCount: inst.prescribed.setCount ?? '',
           reps: inst.prescribed.reps ?? '',

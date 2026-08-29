@@ -95,9 +95,10 @@ function findMostRecentSourceWeek(beforeMonday) {
 }
 
 // assignProgram.js'teki buildBlocksFromExistingWeek'in bireysel/serbest-metin
-// modu da destekleyen ikizi — bkz. oradaki yorum. `catalog` null ise (bireysel
-// hesap) catalogId/parsedName kavramı hiç yok, buildExerciseRow zaten bunu
-// bekliyor (bkz. `if (catalog) {...} else {...}` dalları).
+// modu da destekleyen ikizi — bkz. oradaki yorum (sourceCatalogId önce ID ile,
+// bulamazsa enrichBlock()'un yaptığı AYNI isim eşleştirmesiyle deneniyor).
+// `catalog` null ise (bireysel hesap) catalogId/parsedName kavramı hiç yok,
+// buildExerciseRow zaten bunu bekliyor (bkz. `if (catalog) {...} else {...}` dalları).
 function buildBlocksFromExistingWeek(catalog, weekMonday) {
   const weekDates = Array.from({ length: 7 }, (_, i) => addDaysIso(weekMonday, i));
   const entries = weekDates.map((d) => getDayEntryByDate(d)).filter((e) => e && e.exercises.length);
@@ -117,13 +118,18 @@ function buildBlocksFromExistingWeek(catalog, weekMonday) {
           coachNote: inst.prescribed.coachNote || '',
         };
         if (!catalog) return { ...base, name: exercise ? exercise.name : '' };
-        const catalogId = exercise?.sourceCatalogId || null;
-        const catalogMatch = catalogId ? catalog.find((c) => c.id === catalogId) : null;
+        const parsedName = exercise ? exercise.name : '';
+        const sourceCatalogId = exercise?.sourceCatalogId || null;
+        let catalogMatch = sourceCatalogId ? catalog.find((c) => c.id === sourceCatalogId) : null;
+        if (!catalogMatch) {
+          const normalizedName = normalizeForMatch(parsedName);
+          catalogMatch = catalog.find((c) => normalizeForMatch(c.name) === normalizedName) || null;
+        }
         return {
           ...base,
-          name: catalogMatch ? catalogMatch.name : (exercise ? exercise.name : ''),
-          parsedName: exercise ? exercise.name : '',
-          catalogId,
+          name: catalogMatch ? catalogMatch.name : parsedName,
+          parsedName,
+          catalogId: catalogMatch ? catalogMatch.id : null,
         };
       }),
     };
