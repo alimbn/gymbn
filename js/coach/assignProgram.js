@@ -1,4 +1,4 @@
-import { normalizeForMatch, addDaysIso, mondayOfWeek, todayIso, escapeHtml } from '../util.js';
+import { normalizeForMatch, addDaysIso, mondayOfWeek, todayIso, escapeHtml, formatDateShortTr } from '../util.js';
 import { parseWeeklyProgramText } from '../bulkParse.js';
 import { getStudent, getStudentAppState, setStudentAppState, listCatalog, getMyCoachProfile, notifyStudent } from './coachCloud.js';
 import { confirmSheet } from '../components/confirmSheet.js';
@@ -264,14 +264,14 @@ function renderErrorScreen(container, studentUid, message) {
 }
 
 function renderPasteScreen(container, student, state, monday, catalog) {
-  // Geçen haftanın programını kopyalama — kullanıcının isteği, "yapıştır+ayrıştır"
+  // En son eklenen programı kopyalama — kullanıcının isteği, "yapıştır+ayrıştır"
   // yapılmış gibi AYNI önizleme ekranına düşüyor, sadece kaynak metin yerine
-  // öğrencinin GERÇEKTEN kayıtlı geçen hafta verisi. Geçen hafta hiç egzersizli
-  // gün yoksa (henüz hiç program atanmamışsa) düğme hiç gösterilmiyor — boşa
-  // tıklanacak bir şey olmasın diye.
-  const prevMonday = addDaysIso(monday, -7);
-  const hasPreviousWeek = Array.from({ length: 7 }, (_, i) => addDaysIso(prevMonday, i))
-    .some((d) => { const e = findDayEntryByDate(state, d); return e && e.exercises.length; });
+  // öğrencinin GERÇEKTEN kayıtlı en son dolu haftası. Sabit "geçen hafta" DEĞİL —
+  // öğrenci ara vermiş/tatile gitmiş olabilir, o yüzden bu haftadan önceki, en az
+  // bir egzersizli günü olan en son haftayı arıyoruz (1 hafta önce de olsa 10 hafta
+  // önce de olsa fark etmez). Hiç böyle bir hafta yoksa (henüz hiç program
+  // atanmamışsa) düğme hiç gösterilmiyor — boşa tıklanacak bir şey olmasın diye.
+  const sourceMonday = findMostRecentSourceWeek(state, monday);
 
   container.innerHTML = `
     <div class="view-header">
@@ -280,8 +280,8 @@ function renderPasteScreen(container, student, state, monday, catalog) {
       <span></span>
     </div>
     <p class="muted bulk-intro">Öğrenci: <strong>${escapeHtml(student.displayName)}</strong></p>
-    ${hasPreviousWeek ? `
-      <button type="button" class="btn btn-block" id="copy-prev-week-btn">↻ Geçen Haftanın Programını Kopyala</button>
+    ${sourceMonday ? `
+      <button type="button" class="btn btn-block" id="copy-prev-week-btn">↻ ${formatDateShortTr(sourceMonday)} – ${formatDateShortTr(addDaysIso(sourceMonday, 6))} Programını Kopyala</button>
       <p class="muted" style="text-align:center; margin:var(--space-2) 0 var(--space-4);">veya</p>
     ` : ''}
     <p class="muted bulk-intro">Haftalık programı, gün başlıklarının arasında boş satır bırakarak aşağıya yapıştır:</p>
@@ -295,9 +295,9 @@ Barfiks 3 set 5-6 tekrar
     <button type="button" class="btn btn-primary btn-block" id="parse-btn">Ayrıştır</button>
   `;
 
-  if (hasPreviousWeek) {
+  if (sourceMonday) {
     container.querySelector('#copy-prev-week-btn').addEventListener('click', () => {
-      const blocks = assignDefaultDates(buildBlocksFromExistingWeek(state, catalog, prevMonday), state, monday);
+      const blocks = assignDefaultDates(buildBlocksFromExistingWeek(state, catalog, sourceMonday), state, monday);
       renderReviewScreen(container, student, state, monday, blocks, catalog);
     });
   }
@@ -313,12 +313,27 @@ Barfiks 3 set 5-6 tekrar
   });
 }
 
-// Geçen haftanın GERÇEK (kayıtlı) günlerini, enrichBlock()'un ayrıştırılmış
-// metinden ürettiğiyle AYNI şekle çeviriyor — önizleme ekranı ikisi arasındaki
-// farkı hiç bilmiyor. Egzersizsiz (boş/dinlenme) günler atlanıyor, kopyalanacak
-// bir şey yok çünkü. catalogId hep exercise.sourceCatalogId'den geliyor (bkz.
-// resolveLocalExercise) — eski, kataloğa hiç bağlanmamış bir kayıt varsa
-// catalogId null kalır, önizlemede "eşleşme yok" olarak normal şekilde işleniyor.
+// `beforeMonday`den KESİNLİKLE önceki (bu hafta hariç), en az bir egzersizli günü
+// olan en son tarihi bulup o tarihin ait olduğu haftanın Pazartesi'sini döner —
+// böyle bir tarih hiç yoksa null. Sabit bir "1 hafta öncesi" aralığı DEĞİL, tüm
+// geçmişi tarar; ne kadar eskiyse eskisin fark etmiyor (bkz. renderPasteScreen).
+function findMostRecentSourceWeek(state, beforeMonday) {
+  let latestDate = null;
+  for (const entry of state.dayEntries) {
+    if (!entry.exercises.length) continue;
+    if (entry.date >= beforeMonday) continue;
+    if (!latestDate || entry.date > latestDate) latestDate = entry.date;
+  }
+  return latestDate ? mondayOfWeek(latestDate) : null;
+}
+
+// Kaynak haftanın (findMostRecentSourceWeek'in bulduğu) GERÇEK (kayıtlı)
+// günlerini, enrichBlock()'un ayrıştırılmış metinden ürettiğiyle AYNI şekle
+// çeviriyor — önizleme ekranı ikisi arasındaki farkı hiç bilmiyor. Egzersizsiz
+// (boş/dinlenme) günler atlanıyor, kopyalanacak bir şey yok çünkü. catalogId hep
+// exercise.sourceCatalogId'den geliyor (bkz. resolveLocalExercise) — eski,
+// kataloğa hiç bağlanmamış bir kayıt varsa catalogId null kalır, önizlemede
+// "eşleşme yok" olarak normal şekilde işleniyor.
 function buildBlocksFromExistingWeek(state, catalog, weekMonday) {
   const weekDates = Array.from({ length: 7 }, (_, i) => addDaysIso(weekMonday, i));
   const entries = weekDates.map((d) => findDayEntryByDate(state, d)).filter((e) => e && e.exercises.length);

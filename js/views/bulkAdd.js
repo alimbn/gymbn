@@ -1,9 +1,9 @@
 import {
-  dayTypes, exercises, createDayEntry, getDayEntryByDate, suggestNextDayNumber,
+  dayTypes, exercises, createDayEntry, getDayEntryByDate, getDayEntries, suggestNextDayNumber,
   addExerciseInstanceWithPrescribed, updateDayEntryField,
 } from '../storage.js';
 import {
-  normalizeForMatch, addDaysIso, mondayOfWeek, todayIso, escapeHtml,
+  normalizeForMatch, addDaysIso, mondayOfWeek, todayIso, escapeHtml, formatDateShortTr,
 } from '../util.js';
 import { parseWeeklyProgramText } from '../bulkParse.js';
 import { confirmSheet } from '../components/confirmSheet.js';
@@ -34,12 +34,10 @@ export async function render(container, params) {
 }
 
 function renderPasteScreen(container, monday, catalog) {
-  // assignProgram.js'teki AYNI "geçen haftayı kopyala" kısayolu — bkz. oradaki
-  // yorum. Bireysel/coach-yönetimli her iki modda da çalışıyor, sadece kataloğa
-  // eşleşme kavramı (catalog varsa) korunuyor.
-  const prevMonday = addDaysIso(monday, -7);
-  const hasPreviousWeek = Array.from({ length: 7 }, (_, i) => addDaysIso(prevMonday, i))
-    .some((d) => { const e = getDayEntryByDate(d); return e && e.exercises.length; });
+  // assignProgram.js'teki AYNI "en son dolu haftayı kopyala" kısayolu — bkz.
+  // oradaki yorum. Bireysel/coach-yönetimli her iki modda da çalışıyor, sadece
+  // kataloğa eşleşme kavramı (catalog varsa) korunuyor.
+  const sourceMonday = findMostRecentSourceWeek(monday);
 
   container.innerHTML = `
     <div class="view-header">
@@ -47,8 +45,8 @@ function renderPasteScreen(container, monday, catalog) {
       <h2 class="view-title">Programı Yapıştır</h2>
       <span></span>
     </div>
-    ${hasPreviousWeek ? `
-      <button type="button" class="btn btn-block" id="copy-prev-week-btn">↻ Geçen Haftanın Programını Kopyala</button>
+    ${sourceMonday ? `
+      <button type="button" class="btn btn-block" id="copy-prev-week-btn">↻ ${formatDateShortTr(sourceMonday)} – ${formatDateShortTr(addDaysIso(sourceMonday, 6))} Programını Kopyala</button>
       <p class="muted" style="text-align:center; margin:var(--space-2) 0 var(--space-4);">veya</p>
     ` : ''}
     <p class="muted bulk-intro">Hocanın attığı haftalık programı, gün başlıklarının arasında boş satır bırakarak aşağıya yapıştır:</p>
@@ -64,9 +62,9 @@ Barfiks 3 set 5-6 tekrar
 
   container.querySelector('#back-btn').addEventListener('click', () => history.back());
 
-  if (hasPreviousWeek) {
+  if (sourceMonday) {
     container.querySelector('#copy-prev-week-btn').addEventListener('click', () => {
-      const blocks = assignDefaultDates(buildBlocksFromExistingWeek(catalog, prevMonday), monday);
+      const blocks = assignDefaultDates(buildBlocksFromExistingWeek(catalog, sourceMonday), monday);
       renderReviewScreen(container, monday, blocks, catalog);
     });
   }
@@ -80,6 +78,20 @@ Barfiks 3 set 5-6 tekrar
     );
     renderReviewScreen(container, monday, blocks, catalog);
   });
+}
+
+// assignProgram.js'teki findMostRecentSourceWeek'in AYNI mantığı — bkz. oradaki
+// yorum — sadece `state.dayEntries` yerine storage.js'in `getDayEntries()`'ini
+// okuyor. `beforeMonday`den kesinlikle önceki, en az bir egzersizli günü olan en
+// son tarihin haftasının Pazartesi'sini döner; yoksa null.
+function findMostRecentSourceWeek(beforeMonday) {
+  let latestDate = null;
+  for (const entry of getDayEntries()) {
+    if (!entry.exercises.length) continue;
+    if (entry.date >= beforeMonday) continue;
+    if (!latestDate || entry.date > latestDate) latestDate = entry.date;
+  }
+  return latestDate ? mondayOfWeek(latestDate) : null;
 }
 
 // assignProgram.js'teki buildBlocksFromExistingWeek'in bireysel/serbest-metin
