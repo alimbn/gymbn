@@ -264,6 +264,15 @@ function renderErrorScreen(container, studentUid, message) {
 }
 
 function renderPasteScreen(container, student, state, monday, catalog) {
+  // Geçen haftanın programını kopyalama — kullanıcının isteği, "yapıştır+ayrıştır"
+  // yapılmış gibi AYNI önizleme ekranına düşüyor, sadece kaynak metin yerine
+  // öğrencinin GERÇEKTEN kayıtlı geçen hafta verisi. Geçen hafta hiç egzersizli
+  // gün yoksa (henüz hiç program atanmamışsa) düğme hiç gösterilmiyor — boşa
+  // tıklanacak bir şey olmasın diye.
+  const prevMonday = addDaysIso(monday, -7);
+  const hasPreviousWeek = Array.from({ length: 7 }, (_, i) => addDaysIso(prevMonday, i))
+    .some((d) => { const e = findDayEntryByDate(state, d); return e && e.exercises.length; });
+
   container.innerHTML = `
     <div class="view-header">
       <a href="#/student/${student.id}" class="back-link" aria-label="Geri">←</a>
@@ -271,6 +280,10 @@ function renderPasteScreen(container, student, state, monday, catalog) {
       <span></span>
     </div>
     <p class="muted bulk-intro">Öğrenci: <strong>${escapeHtml(student.displayName)}</strong></p>
+    ${hasPreviousWeek ? `
+      <button type="button" class="btn btn-block" id="copy-prev-week-btn">↻ Geçen Haftanın Programını Kopyala</button>
+      <p class="muted" style="text-align:center; margin:var(--space-2) 0 var(--space-4);">veya</p>
+    ` : ''}
     <p class="muted bulk-intro">Haftalık programı, gün başlıklarının arasında boş satır bırakarak aşağıya yapıştır:</p>
     <textarea id="paste-textarea" class="bulk-textarea" placeholder="Anterior - 1
 dumbell shoulder press 2 set 8-9 tekrar 12.5kg
@@ -282,6 +295,13 @@ Barfiks 3 set 5-6 tekrar
     <button type="button" class="btn btn-primary btn-block" id="parse-btn">Ayrıştır</button>
   `;
 
+  if (hasPreviousWeek) {
+    container.querySelector('#copy-prev-week-btn').addEventListener('click', () => {
+      const blocks = assignDefaultDates(buildBlocksFromExistingWeek(state, catalog, prevMonday), state, monday);
+      renderReviewScreen(container, student, state, monday, blocks, catalog);
+    });
+  }
+
   container.querySelector('#parse-btn').addEventListener('click', () => {
     const text = container.querySelector('#paste-textarea').value;
     if (!text.trim()) return;
@@ -290,6 +310,40 @@ Barfiks 3 set 5-6 tekrar
       state, monday,
     );
     renderReviewScreen(container, student, state, monday, blocks, catalog);
+  });
+}
+
+// Geçen haftanın GERÇEK (kayıtlı) günlerini, enrichBlock()'un ayrıştırılmış
+// metinden ürettiğiyle AYNI şekle çeviriyor — önizleme ekranı ikisi arasındaki
+// farkı hiç bilmiyor. Egzersizsiz (boş/dinlenme) günler atlanıyor, kopyalanacak
+// bir şey yok çünkü. catalogId hep exercise.sourceCatalogId'den geliyor (bkz.
+// resolveLocalExercise) — eski, kataloğa hiç bağlanmamış bir kayıt varsa
+// catalogId null kalır, önizlemede "eşleşme yok" olarak normal şekilde işleniyor.
+function buildBlocksFromExistingWeek(state, catalog, weekMonday) {
+  const weekDates = Array.from({ length: 7 }, (_, i) => addDaysIso(weekMonday, i));
+  const entries = weekDates.map((d) => findDayEntryByDate(state, d)).filter((e) => e && e.exercises.length);
+  return entries.map((entry) => {
+    const dt = entry.dayTypeId ? state.dayTypes.find((d) => d.id === entry.dayTypeId) : null;
+    return {
+      dayTypeRaw: dt ? dt.name : 'Antrenman',
+      dayTypeId: entry.dayTypeId || null,
+      assignedDate: null,
+      exercises: entry.exercises.map((inst) => {
+        const exercise = state.exercises.find((e) => e.id === inst.exerciseId);
+        const catalogId = exercise?.sourceCatalogId || null;
+        const catalogMatch = catalogId ? catalog.find((c) => c.id === catalogId) : null;
+        return {
+          name: catalogMatch ? catalogMatch.name : (exercise ? exercise.name : ''),
+          parsedName: exercise ? exercise.name : '',
+          catalogId,
+          weight: inst.prescribed.weight || '',
+          setCount: inst.prescribed.setCount ?? '',
+          reps: inst.prescribed.reps ?? '',
+          rir: inst.prescribed.rir ?? '',
+          coachNote: inst.prescribed.coachNote || '',
+        };
+      }),
+    };
   });
 }
 

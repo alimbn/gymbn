@@ -34,12 +34,23 @@ export async function render(container, params) {
 }
 
 function renderPasteScreen(container, monday, catalog) {
+  // assignProgram.js'teki AYNI "geçen haftayı kopyala" kısayolu — bkz. oradaki
+  // yorum. Bireysel/coach-yönetimli her iki modda da çalışıyor, sadece kataloğa
+  // eşleşme kavramı (catalog varsa) korunuyor.
+  const prevMonday = addDaysIso(monday, -7);
+  const hasPreviousWeek = Array.from({ length: 7 }, (_, i) => addDaysIso(prevMonday, i))
+    .some((d) => { const e = getDayEntryByDate(d); return e && e.exercises.length; });
+
   container.innerHTML = `
     <div class="view-header">
       <button type="button" class="back-link" id="back-btn" aria-label="Geri">←</button>
       <h2 class="view-title">Programı Yapıştır</h2>
       <span></span>
     </div>
+    ${hasPreviousWeek ? `
+      <button type="button" class="btn btn-block" id="copy-prev-week-btn">↻ Geçen Haftanın Programını Kopyala</button>
+      <p class="muted" style="text-align:center; margin:var(--space-2) 0 var(--space-4);">veya</p>
+    ` : ''}
     <p class="muted bulk-intro">Hocanın attığı haftalık programı, gün başlıklarının arasında boş satır bırakarak aşağıya yapıştır:</p>
     <textarea id="paste-textarea" class="bulk-textarea" placeholder="Anterior - 1
 dumbell shoulder press 2 set 8-9 tekrar 12.5kg
@@ -53,6 +64,13 @@ Barfiks 3 set 5-6 tekrar
 
   container.querySelector('#back-btn').addEventListener('click', () => history.back());
 
+  if (hasPreviousWeek) {
+    container.querySelector('#copy-prev-week-btn').addEventListener('click', () => {
+      const blocks = assignDefaultDates(buildBlocksFromExistingWeek(catalog, prevMonday), monday);
+      renderReviewScreen(container, monday, blocks, catalog);
+    });
+  }
+
   container.querySelector('#parse-btn').addEventListener('click', () => {
     const text = container.querySelector('#paste-textarea').value;
     if (!text.trim()) return;
@@ -61,6 +79,42 @@ Barfiks 3 set 5-6 tekrar
       monday,
     );
     renderReviewScreen(container, monday, blocks, catalog);
+  });
+}
+
+// assignProgram.js'teki buildBlocksFromExistingWeek'in bireysel/serbest-metin
+// modu da destekleyen ikizi — bkz. oradaki yorum. `catalog` null ise (bireysel
+// hesap) catalogId/parsedName kavramı hiç yok, buildExerciseRow zaten bunu
+// bekliyor (bkz. `if (catalog) {...} else {...}` dalları).
+function buildBlocksFromExistingWeek(catalog, weekMonday) {
+  const weekDates = Array.from({ length: 7 }, (_, i) => addDaysIso(weekMonday, i));
+  const entries = weekDates.map((d) => getDayEntryByDate(d)).filter((e) => e && e.exercises.length);
+  return entries.map((entry) => {
+    const dt = entry.dayTypeId ? dayTypes.byId(entry.dayTypeId) : null;
+    return {
+      dayTypeRaw: dt ? dt.name : 'Antrenman',
+      dayTypeId: entry.dayTypeId || null,
+      assignedDate: null,
+      exercises: entry.exercises.map((inst) => {
+        const exercise = exercises.byId(inst.exerciseId);
+        const base = {
+          weight: inst.prescribed.weight || '',
+          setCount: inst.prescribed.setCount ?? '',
+          reps: inst.prescribed.reps ?? '',
+          rir: inst.prescribed.rir ?? '',
+          coachNote: inst.prescribed.coachNote || '',
+        };
+        if (!catalog) return { ...base, name: exercise ? exercise.name : '' };
+        const catalogId = exercise?.sourceCatalogId || null;
+        const catalogMatch = catalogId ? catalog.find((c) => c.id === catalogId) : null;
+        return {
+          ...base,
+          name: catalogMatch ? catalogMatch.name : (exercise ? exercise.name : ''),
+          parsedName: exercise ? exercise.name : '',
+          catalogId,
+        };
+      }),
+    };
   });
 }
 
