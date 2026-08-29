@@ -11,8 +11,6 @@ import * as assignProgram from './coach/assignProgram.js';
 import * as studentMeasurements from './coach/studentMeasurements.js';
 import * as studentPayments from './coach/studentPayments.js';
 import * as studentSchedule from './coach/studentSchedule.js';
-import * as studentScheduleSummary from './coach/studentScheduleSummary.js';
-import * as studentScheduleSummaryDesktop from './coach/studentScheduleSummaryDesktop.js';
 import * as exerciseCatalog from './admin/exerciseCatalog.js';
 
 const viewRoot = document.getElementById('view-root');
@@ -76,9 +74,10 @@ function initCoachApp() {
   addRoute(/^#\/assign\/([^/]+)$/, (root, match) => assignProgram.render(root, { studentUid: match[1] }));
   addRoute(/^#\/measurements\/([^/]+)$/, (root, match) => studentMeasurements.render(root, { studentUid: match[1] }));
   addRoute(/^#\/payments\/([^/]+)$/, (root, match) => studentPayments.render(root, { studentUid: match[1] }));
+  // Haftalık Özet/Masaüstü Özeti artık ayrı sayfalar değil, bu tek ekranın
+  // içinde bir sekme anahtarı (bkz. studentSchedule.js) — o yüzden burada
+  // sadece bir route yeterli.
   addRoute(/^#\/schedule\/([^/]+)(?:\/([^/]+))?$/, (root, match) => studentSchedule.render(root, { studentUid: match[1], mondayIso: match[2] }));
-  addRoute(/^#\/schedule\/([^/]+)\/([^/]+)\/summary$/, (root, match) => studentScheduleSummary.render(root, { studentUid: match[1], mondayIso: match[2] }));
-  addRoute(/^#\/schedule\/([^/]+)\/([^/]+)\/summary-desktop$/, (root, match) => studentScheduleSummaryDesktop.render(root, { studentUid: match[1], mondayIso: match[2] }));
   // admin'in canManageCatalog toggle'ıyla izin verdiği hocalar için — admin.html'in
   // AYNI exerciseCatalog.js ekranı, sadece Firestore fonksiyonları coachCloud.js'ten
   // (kendi paylaşılan oturumuyla). İzinsiz bir hoca buraya URL'i elle yazsa bile

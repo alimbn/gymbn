@@ -2224,6 +2224,34 @@ a.list-item {
   margin-bottom: var(--space-4);
 }
 
+/* Hocanın Takvim ekranındaki Haftalık Özet/Masaüstü Özeti sekme anahtarı —
+   route değişmiyor, sadece #schedule-content'in içeriği değişiyor. */
+.schedule-view-toggle {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.schedule-toggle-btn {
+  flex: 1;
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.schedule-toggle-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-text);
+}
+
 .summary-range {
   text-align: center;
   color: var(--text-muted);

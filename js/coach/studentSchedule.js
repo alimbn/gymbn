@@ -1,7 +1,8 @@
 import { getStudent, getStudentAppState } from './coachCloud.js';
+import { buildDesktopSummary } from './studentScheduleSummaryDesktop.js';
 import {
   addDaysIso, dayOfWeekLabel, formatDateShortTr, formatDateLongTr, mondayOfWeek, todayIso,
-  escapeHtml, statusBadge, formatDuration,
+  escapeHtml, statusBadge, formatDuration, setViewportZoomable,
 } from '../util.js';
 
 // weekSummary.js'in AYNI render mantığı (o zaten tamamen görüntüleme-amaçlı,
@@ -78,25 +79,53 @@ function renderScreen(container, studentUid, student, state, mondayIso) {
       <div class="summary-stat good"><strong>${goodCount}</strong><span>✅ istenildiği gibi</span></div>
       <div class="summary-stat bad"><strong>${badCount}</strong><span>🔻 yapılamadı</span></div>
     </div>
-    <div class="summary-days summary-days-accordion" id="summary-days">
-      ${entries.length ? entries.map((e) => buildDaySummary(e, state)).join('') : '<p class="empty-state">Bu haftaya henüz program atanmadı.</p>'}
-    </div>
     ${entries.length ? `
-      <a href="#/schedule/${studentUid}/${mondayIso}/summary" class="btn btn-block week-summary-link">📄 Haftalık Özet</a>
-      <a href="#/schedule/${studentUid}/${mondayIso}/summary-desktop" class="btn btn-block week-summary-link">🖥️ Masaüstü Özeti</a>
-    ` : ''}
+      <div class="schedule-view-toggle">
+        <button type="button" class="schedule-toggle-btn active" data-view="haftalik">📄 Haftalık Özet</button>
+        <button type="button" class="schedule-toggle-btn" data-view="masaustu">🖥️ Masaüstü Özeti</button>
+      </div>
+      <div id="schedule-content">${buildAccordionView(entries, state)}</div>
+    ` : '<p class="empty-state">Bu haftaya henüz program atanmadı.</p>'}
   `;
 
-  // Akordiyon: her girişte tam kapalı başlar (yeniden render'da sıfırlanıyor,
-  // ayrı bir state saklanmıyor), her gün BAĞIMSIZ açılıp kapanıyor — dayEntry.js'in
+  if (!entries.length) return;
+
+  const contentEl = container.querySelector('#schedule-content');
+
+  // Akordiyon: her girişte VE her "Haftalık Özet"e dönüşte tam kapalı başlar —
+  // ayrı bir state saklanmıyor, buildAccordionView her çağrıldığında taze
+  // .collapsed markup üretiyor. Her gün BAĞIMSIZ açılıp kapanıyor — dayEntry.js'in
   // egzersiz kartlarındaki "tek seferde bir tane" kuralının aksine, istenirse
-  // hepsi aynı anda açık kalabilir. Salt görüntüleme olduğu için (içeride hiçbir
-  // interaktif eleman yok) yeniden render yerine tek bir CSS sınıfı yeterli.
-  container.querySelector('#summary-days')?.addEventListener('click', (e) => {
+  // hepsi aynı anda açık kalabilir. #schedule-content sekme değişince yeniden
+  // yazılsa da HEP AYNI (stabil) elemanda kaldığı için tek bir delegated
+  // listener iki görünüm için de yeterli — masaüstü tabloda .summary-day-header
+  // hiç yok, kontrol orada sessizce no-op oluyor.
+  contentEl.addEventListener('click', (e) => {
     const header = e.target.closest('.summary-day-header');
     if (!header) return;
     header.closest('.summary-day').classList.toggle('collapsed');
   });
+
+  // Sekme değişimi: route değişmediği için router.js'in setViewportZoomable(false)
+  // sıfırlaması burada devreye girmiyor — o yüzden yönü biz yönetiyoruz (masaüstü
+  // yoğun tablo için zoom açık, haftalık özete dönünce kapalı).
+  container.querySelectorAll('.schedule-toggle-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (btn.classList.contains('active')) return;
+      container.querySelectorAll('.schedule-toggle-btn').forEach((b) => b.classList.toggle('active', b === btn));
+      if (btn.dataset.view === 'masaustu') {
+        setViewportZoomable(true);
+        contentEl.innerHTML = buildDesktopSummary(entries, state);
+      } else {
+        setViewportZoomable(false);
+        contentEl.innerHTML = buildAccordionView(entries, state);
+      }
+    });
+  });
+}
+
+function buildAccordionView(entries, state) {
+  return `<div class="summary-days summary-days-accordion">${entries.map((e) => buildDaySummary(e, state)).join('')}</div>`;
 }
 
 function buildDaySummary(entry, state) {

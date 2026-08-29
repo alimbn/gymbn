@@ -1,82 +1,17 @@
-import { getStudent, getStudentAppState } from './coachCloud.js';
 import {
-  addDaysIso, dayOfWeekLabel, formatDateShortTr, formatDateLongTr, escapeHtml, statusBadge, formatDuration,
-  setViewportZoomable,
+  dayOfWeekLabel, formatDateLongTr, escapeHtml, statusBadge, formatDuration,
 } from '../util.js';
 
-// Öğrencinin kendi weekSummaryDesktop.js'inin hoca-tarafı birebir kopyası —
-// AYNI geniş-tablo görüntüleme, sadece veri kaynağı uzaktan çekilen `state`,
-// üstüne studentSchedule.js'in (Takvim) ‹/› hafta gezinmesi eklendi.
-// setAppChromeHidden burada zararsız bir no-op: coach.html'de zaten .app-header/
-// .bottom-nav gibi kalıcı bir chrome yok, gizlenecek bir şey bulunmuyor.
-export async function render(container, { studentUid, mondayIso }) {
-  setViewportZoomable(true);
-  renderLoadingScreen(container);
-
-  let student;
-  let remoteState;
-  try {
-    [student, remoteState] = await Promise.all([getStudent(studentUid), getStudentAppState(studentUid)]);
-  } catch (err) {
-    console.error('Öğrenci verisi yüklenemedi', err);
-    renderErrorScreen(container, 'Öğrenci verisi yüklenemedi, internet bağlantını kontrol edip tekrar dene.');
-    return;
-  }
-  if (!student) {
-    renderErrorScreen(container, 'Öğrenci bulunamadı.');
-    return;
-  }
-
-  const state = remoteState || {};
-  state.dayEntries = state.dayEntries || [];
-  state.dayTypes = state.dayTypes || [];
-  state.exercises = state.exercises || [];
-  renderScreen(container, studentUid, student, state, mondayIso);
-}
-
-function renderLoadingScreen(container) {
-  container.innerHTML = '<p class="empty-state">Yükleniyor…</p>';
-}
-
-function renderErrorScreen(container, message) {
-  container.innerHTML = `
-    <div class="view-header">
-      <button type="button" class="back-link" id="back-btn" aria-label="Geri">←</button>
-      <h2 class="view-title">Masaüstü Özeti</h2>
-      <span></span>
-    </div>
-    <p class="empty-state">${escapeHtml(message)}</p>
-  `;
-  container.querySelector('#back-btn').addEventListener('click', () => history.back());
-}
-
-function renderScreen(container, studentUid, student, state, mondayIso) {
-  const days = Array.from({ length: 7 }, (_, i) => addDaysIso(mondayIso, i));
-  const entries = days.map((d) => state.dayEntries.find((e) => e.date === d)).filter(Boolean);
-  const prevMonday = addDaysIso(mondayIso, -7);
-  const nextMonday = addDaysIso(mondayIso, 7);
+// Artık kendi ekranı/route'u YOK — studentSchedule.js'in (Takvim) "Masaüstü
+// Özeti" sekmesi bu tek fonksiyonu çağırıyor, aynı zaten çekilmiş `state`/
+// `entries` ile (ikinci bir fetch yok). Görsel çıktı öncekiyle birebir aynı
+// (geniş tablo, gün-tipi ailesine göre gruplu) — sadece nereden çağrıldığı
+// değişti. setViewportZoomable çağrısı da artık studentSchedule.js'te, sekme
+// değişince (route değişmeden) hangi yönde açılıp kapanacağını o yönetiyor.
+export function buildDesktopSummary(entries, state) {
+  if (!entries.length) return '<p class="empty-state">Bu haftaya henüz kayıt eklenmedi.</p>';
   const rows = groupByDayTypeFamily(entries, state);
-
-  container.innerHTML = `
-    <div class="view-header">
-      <button type="button" class="back-link" id="back-btn" aria-label="Geri">←</button>
-      <h2 class="view-title">Masaüstü Özeti</h2>
-      <span></span>
-    </div>
-    <p class="view-subtitle">${escapeHtml(student.displayName)}</p>
-    <div class="week-nav">
-      <a href="#/schedule/${studentUid}/${prevMonday}/summary-desktop" class="btn-icon" aria-label="Önceki hafta">‹</a>
-      <div class="week-range">${formatDateShortTr(mondayIso)} – ${formatDateShortTr(days[6])}</div>
-      <a href="#/schedule/${studentUid}/${nextMonday}/summary-desktop" class="btn-icon" aria-label="Sonraki hafta">›</a>
-    </div>
-    <div class="desktop-summary">
-      ${entries.length ? rows.map((row) => `<div class="desktop-day-row">${row.map((entry) => buildDayTable(entry, state)).join('')}</div>`).join('') : '<p class="empty-state">Bu haftaya henüz kayıt eklenmedi.</p>'}
-    </div>
-  `;
-
-  container.querySelector('#back-btn').addEventListener('click', () => {
-    history.back();
-  });
+  return rows.map((row) => `<div class="desktop-day-row">${row.map((entry) => buildDayTable(entry, state)).join('')}</div>`).join('');
 }
 
 function buildDayTable(entry, state) {
