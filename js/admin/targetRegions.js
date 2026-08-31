@@ -1,4 +1,4 @@
-import { escapeHtml, ICON_TRASH } from '../util.js';
+import { escapeHtml, ICON_TRASH, normalizeForMatch } from '../util.js';
 import { confirmSheet } from '../components/confirmSheet.js';
 import { listRegions, addRegion, renameRegion, archiveRegion } from './adminCloud.js';
 
@@ -59,6 +59,10 @@ export async function render(container, { onBack }) {
     applyFilter();
   }
 
+  // exerciseCatalog.js'teki AYNI düzeltme — bkz. oradaki yorum: "Ekle" artık
+  // sadece isim BİREBİR (normalizeForMatch) eşleşiyorsa engelleniyor, salt
+  // "benzer" (alt-dizge) eşleşme (ör. "Omuz" yazınca "Ön Omuz" varken) artık
+  // engellemiyor, sadece listede öne çıkarıyor.
   function rowMatches(row, q) {
     const title = row.querySelector('.list-item-title');
     return !q || (title && title.textContent.toLocaleLowerCase('tr').includes(q));
@@ -72,9 +76,15 @@ export async function render(container, { onBack }) {
       row.classList.toggle('hidden-by-filter', !match);
       if (match) visible++;
     });
+    const normalizedQuery = normalizeForMatch(addInput.value);
+    const exactMatch = !!normalizedQuery && items.some((it) => normalizeForMatch(it.name) === normalizedQuery);
     if (!q) {
       searchHint.textContent = '';
       searchHint.classList.remove('active');
+      addSubmitBtn.disabled = true;
+    } else if (exactMatch) {
+      searchHint.textContent = 'Bu isimde bir bölge zaten var.';
+      searchHint.classList.add('active');
       addSubmitBtn.disabled = true;
     } else if (visible === 0) {
       searchHint.textContent = 'Bu isimde bir bölge yok, yeni ekleyebilirsin.';
@@ -83,7 +93,7 @@ export async function render(container, { onBack }) {
     } else {
       searchHint.textContent = `${visible} benzer kayıt var, önce onlara bak.`;
       searchHint.classList.add('active');
-      addSubmitBtn.disabled = true;
+      addSubmitBtn.disabled = false;
     }
   }
   addInput.addEventListener('input', applyFilter);

@@ -1,4 +1,4 @@
-import { escapeHtml, ICON_TRASH, ICON_MEDIA } from '../util.js';
+import { escapeHtml, ICON_TRASH, ICON_MEDIA, normalizeForMatch } from '../util.js';
 import { confirmSheet } from '../components/confirmSheet.js';
 
 // libraryList.js'in aynı görsel/etkileşim dili — sadece veri kaynağı yerel
@@ -68,10 +68,14 @@ export async function render(container, {
     applyFilter();
   }
 
-  // Yazarken listeyi anlık filtrele (rosterUi.js'teki aynı arama mantığı) — VE
-  // "Ekle" düğmesini SADECE isim hiçbir mevcut kayıtla eşleşmiyorsa aktif et.
-  // Amaç: aynı hareketin yazım farkıyla (ör. "Barfiks"/"barfiks ") iki kez
-  // eklenmesini engellemek — kullanıcının kendi isteği.
+  // Yazarken listeyi anlık filtrele (rosterUi.js'teki aynı arama mantığı) — "Ekle"
+  // düğmesi SADECE isim BİREBİR (normalizeForMatch ile) mevcut bir kayıtla
+  // eşleşiyorsa devre dışı kalıyor. Önceden "benzer" (alt-dizge) eşleşme bile
+  // engelliyordu — "bench press" yazınca "Pause Bench Press" varsa eklemeyi
+  // tamamen kilitliyordu, halbuki ikisi apayrı hareketler. Artık benzer kayıtlar
+  // hâlâ listede öne çıkarılıyor (yazım farkıyla yanlışlıkla ikinci bir kopya
+  // açmayı önlemek için, kullanıcının kendi isteği) ama sadece GERÇEKTEN aynı
+  // isim varsa "Ekle" engelleniyor.
   function rowMatches(row, q) {
     const title = row.querySelector('.list-item-title');
     return !q || (title && title.textContent.toLocaleLowerCase('tr').includes(q));
@@ -85,9 +89,15 @@ export async function render(container, {
       row.classList.toggle('hidden-by-filter', !match);
       if (match) visible++;
     });
+    const normalizedQuery = normalizeForMatch(addInput.value);
+    const exactMatch = !!normalizedQuery && items.some((it) => normalizeForMatch(it.name) === normalizedQuery);
     if (!q) {
       searchHint.textContent = '';
       searchHint.classList.remove('active');
+      addSubmitBtn.disabled = true;
+    } else if (exactMatch) {
+      searchHint.textContent = 'Bu isimde bir egzersiz zaten var.';
+      searchHint.classList.add('active');
       addSubmitBtn.disabled = true;
     } else if (visible === 0) {
       searchHint.textContent = 'Bu isimde bir egzersiz yok, yeni ekleyebilirsin.';
@@ -96,7 +106,7 @@ export async function render(container, {
     } else {
       searchHint.textContent = `${visible} benzer kayıt var, önce onlara bak.`;
       searchHint.classList.add('active');
-      addSubmitBtn.disabled = true;
+      addSubmitBtn.disabled = false;
     }
   }
   addInput.addEventListener('input', applyFilter);
