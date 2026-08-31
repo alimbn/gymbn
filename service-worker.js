@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gymbn-v89';
+const CACHE_NAME = 'gymbn-v90';
 
 const PRECACHE_URLS = [
   './',

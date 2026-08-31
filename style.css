@@ -1944,6 +1944,75 @@ a.list-item {
 }
 
 .bulk-block-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Günler arası sınırı net kılan renkli başlık şeridi + akordiyon — kullanıcının
+   kendi isteği: A seçeneğinin bandı + B/C'nin aç/kapa davranışı birleşik.
+   İlk gün her zaman açık, diğerleri kapalı geliyor (bkz. buildBlockCard'ın
+   startOpen parametresi); kullanıcı istediği kadarını elle açabiliyor. */
+.block-acc-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  background: linear-gradient(180deg, rgba(201, 161, 90, 0.14), rgba(201, 161, 90, 0.02));
+}
+
+.block-acc-header-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.block-acc-header-title {
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.01em;
+}
+
+.block-acc-header-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.block-acc-badge {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  padding: 2px 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.block-acc-chev {
+  color: var(--text-muted);
+  font-size: 13px;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.block-acc-header.collapsed .block-acc-chev {
+  transform: rotate(-90deg);
+}
+
+.block-acc-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.2s ease;
+}
+
+.block-acc-body.collapsed {
+  grid-template-rows: 0fr;
+}
+
+.block-acc-body-inner {
+  overflow: hidden;
   padding: var(--space-4);
 }
 

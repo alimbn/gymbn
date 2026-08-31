@@ -295,8 +295,9 @@ function renderReviewScreen(container, monday, blocks, catalog) {
   });
 
   const blocksRoot = container.querySelector('#blocks-root');
-  blocks.forEach((block) => {
-    blocksRoot.appendChild(buildBlockCard(block, catalog));
+  // assignProgram.js'teki AYNI varsayılan — ilk gün açık, gerisi kapalı.
+  blocks.forEach((block, i) => {
+    blocksRoot.appendChild(buildBlockCard(block, catalog, i === 0));
   });
 
   container.querySelector('#confirm-btn').addEventListener('click', async () => {
@@ -315,7 +316,7 @@ function renderReviewScreen(container, monday, blocks, catalog) {
   });
 }
 
-function buildBlockCard(block, catalog) {
+function buildBlockCard(block, catalog, startOpen) {
   const card = document.createElement('div');
   card.className = 'card bulk-block-card';
 
@@ -327,22 +328,53 @@ function buildBlockCard(block, catalog) {
     : `<option value="" selected>Yeni: ${escapeHtml(block.dayTypeRaw || 'İsimsiz')}</option>`;
 
   card.innerHTML = `
-    <div class="form-row">
-      <div class="field">
-        <label>Gün Tipi</label>
-        <select class="block-daytype-select">${newDayTypeOption}${dayTypeOptions}</select>
+    <div class="block-acc-header${startOpen ? '' : ' collapsed'}">
+      <div class="block-acc-header-main">
+        <span class="block-acc-header-title"></span>
+        <span class="block-acc-header-sub"></span>
       </div>
-      <div class="field">
-        <label>Tarih</label>
-        <input type="date" class="block-date-input" value="${block.assignedDate || ''}">
+      <span class="block-acc-badge">${block.exercises.length} egzersiz</span>
+      <span class="block-acc-chev">▾</span>
+    </div>
+    <div class="block-acc-body${startOpen ? '' : ' collapsed'}">
+      <div class="block-acc-body-inner">
+        <div class="form-row">
+          <div class="field">
+            <label>Gün Tipi</label>
+            <select class="block-daytype-select">${newDayTypeOption}${dayTypeOptions}</select>
+          </div>
+          <div class="field">
+            <label>Tarih</label>
+            <input type="date" class="block-date-input" value="${block.assignedDate || ''}">
+          </div>
+        </div>
+        <div class="block-date-info muted"></div>
+        <div class="block-exercise-list"></div>
       </div>
     </div>
-    <div class="block-date-info muted"></div>
-    <div class="block-exercise-list"></div>
   `;
+
+  const header = card.querySelector('.block-acc-header');
+  const body = card.querySelector('.block-acc-body');
+  const headerTitle = card.querySelector('.block-acc-header-title');
+  const headerSub = card.querySelector('.block-acc-header-sub');
+
+  // assignProgram.js'teki AYNI mantık — bkz. oradaki yorum.
+  function updateHeaderText() {
+    const dt = block.dayTypeId ? dayTypes.byId(block.dayTypeId) : null;
+    headerTitle.textContent = dt ? dt.name : (block.dayTypeRaw || 'İsimsiz');
+    headerSub.textContent = block.assignedDate ? formatDateShortTr(block.assignedDate) : 'Tarih seçilmedi';
+  }
+  updateHeaderText();
+
+  header.addEventListener('click', () => {
+    header.classList.toggle('collapsed');
+    body.classList.toggle('collapsed');
+  });
 
   card.querySelector('.block-daytype-select').addEventListener('change', (e) => {
     block.dayTypeId = e.target.value || null;
+    updateHeaderText();
   });
 
   const dateInput = card.querySelector('.block-date-input');
@@ -353,6 +385,7 @@ function buildBlockCard(block, catalog) {
   dateInput.addEventListener('change', (e) => {
     block.assignedDate = e.target.value || null;
     updateDateInfo();
+    updateHeaderText();
   });
   updateDateInfo();
 
