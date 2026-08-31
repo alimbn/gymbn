@@ -165,6 +165,25 @@ export async function getMyCatalogIfManaged() {
   }
 }
 
+// getMyCatalogIfManaged'dan FARKLI amaç: o "bu hesap ZORUNLU dropdown görsün mü"
+// sorusuna cevap veriyor (sadece coach-yönetimli öğrenciler). Bu ise "Kendi
+// Antrenmanım"daki bir hocanın kendi SERBEST yazdığı bir egzersizi İSTEĞE BAĞLI
+// olarak kütüphaneye bağlayabilmesi için — hoca zaten isCoach() ile kataloğu
+// okuyabiliyor (assignProgram.js'te olduğu gibi), burada sadece aynı veriyi
+// bulkAdd.js'in bireysel/serbest-metin ekranına da (salt bu opsiyonel eşleştirme
+// özelliği için) taşıyoruz. Coach değilse veya hata olursa sessizce null.
+export async function getCoachOwnCatalogForLinking() {
+  try {
+    const isCoach = await isCurrentUserAlsoCoach();
+    if (!isCoach) return null;
+    const snap = await getDocs(collection(db, 'exerciseCatalog'));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((e) => !e.archived);
+  } catch (err) {
+    console.error('Katalog okunamadı', err);
+    return null;
+  }
+}
+
 /* ---------- Uygulama içi bildirimler ---------- */
 
 export async function listMyNotifications() {

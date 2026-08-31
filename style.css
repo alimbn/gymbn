@@ -2011,6 +2011,32 @@ a.list-item {
   transform: rotate(-90deg);
 }
 
+/* Birden fazla gün varken hepsini tek tek açıp kapatmak yorucu — sadece 2+
+   günde gösteriliyor (bkz. JS: blocks.length > 1). */
+.toggle-all-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  margin: calc(var(--space-3) * -1) 0 var(--space-3);
+}
+
+.toggle-all-row button {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  font: inherit;
+  font-weight: 600;
+  padding: 4px 2px;
+  cursor: pointer;
+}
+
+.toggle-all-dot {
+  color: var(--border-strong);
+}
+
 /* grid-template-rows: 1fr/0fr tekniği yerine max-height kullanıyoruz —
    içerik uzunluğu egzersiz sayısına göre çok değişken, ve 1fr, boyu "auto"
    olan bir kapsayıcıda beklendiği gibi genişlemiyor (test ederken yakalandı).
@@ -2086,6 +2112,56 @@ a.list-item {
   margin: 0;
   cursor: pointer;
   text-align: left;
+}
+
+/* Kendi Antrenmanım'da serbest yazılan bir egzersizi kütüphaneye bağlama —
+   bkz. bunun geldiği sohbet + js/views/bulkAdd.js'teki wireLinkArea. Görünüşü
+   bilerek .bulk-ex-suggest-btn'in aynısı (aynı satır, aynı işlev ailesi). */
+.link-btn {
+  display: block;
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  font-size: 11.5px;
+  font-family: inherit;
+  padding: 3px 0 0;
+  margin: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.linked-tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0 0;
+  font-size: 11.5px;
+  color: var(--success);
+  font-weight: 600;
+}
+
+.linked-chk {
+  font-weight: 700;
+}
+
+.link-change-btn {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 400;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+
+.bulk-ex-name:disabled {
+  color: var(--text);
+  opacity: 1;
+  -webkit-text-fill-color: var(--text);
 }
 
 .bulk-exercise-row-fields {

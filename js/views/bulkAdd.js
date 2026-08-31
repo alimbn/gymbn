@@ -7,8 +7,9 @@ import {
 } from '../util.js';
 import { parseWeeklyProgramText } from '../bulkParse.js';
 import { confirmSheet } from '../components/confirmSheet.js';
-import { getMyCatalogIfManaged } from '../cloudSync.js';
+import { getMyCatalogIfManaged, getCoachOwnCatalogForLinking } from '../cloudSync.js';
 import { closestCatalogMatch } from '../shared/catalogMatch.js';
+import { openPicker } from '../components/picker.js';
 
 // `catalog` null ise bireysel hesap — eski serbest metin davranışı, hiç değişmedi.
 // Bir dizi ise (boş olsa bile) hesap coach-yönetimli bir öğrenci — o zaman isim
@@ -30,7 +31,12 @@ export async function render(container, params) {
     container.querySelector('#back-btn').addEventListener('click', () => history.back());
     return;
   }
-  renderPasteScreen(container, monday, catalog);
+  // catalog zaten zorunlu-dropdown modundaysa (coach-yönetimli öğrenci) ayrıca
+  // "isteğe bağlı eşleştirme" özelliğine gerek yok — o zaten kataloğa bağlı.
+  // Sadece bireysel/serbest-metin modda VE hesap aynı zamanda coach ise (Kendi
+  // Antrenmanım) devreye giriyor — bkz. getCoachOwnCatalogForLinking.
+  const linkCatalog = catalog ? null : await getCoachOwnCatalogForLinking();
+  renderPasteScreen(container, monday, catalog, linkCatalog);
 }
 
 function weekDates(monday) { return Array.from({ length: 7 }, (_, i) => addDaysIso(monday, i)); }
@@ -78,7 +84,7 @@ function deleteWeekAssignment(monday) {
   }
 }
 
-function renderPasteScreen(container, monday, catalog) {
+function renderPasteScreen(container, monday, catalog, linkCatalog) {
   const occupied = weekIsOccupied(monday);
   const conflictSeq = occupied ? findWeekAssignmentSeq(monday) : null;
 
@@ -130,7 +136,7 @@ Barfiks 3 set 5-6 tekrar
         : `${weekRangeLabel(monday)} haftasının programı${idSuffix} silinsin mi?`;
       if (!(await confirmSheet(message, { confirmLabel: 'Sil' }))) return;
       deleteWeekAssignment(monday);
-      renderPasteScreen(container, monday, catalog);
+      renderPasteScreen(container, monday, catalog, linkCatalog);
     });
     return;
   }
@@ -138,7 +144,7 @@ Barfiks 3 set 5-6 tekrar
   if (sourceMonday) {
     container.querySelector('#copy-prev-week-btn').addEventListener('click', () => {
       const blocks = assignDefaultDates(buildBlocksFromExistingWeek(catalog, sourceMonday), monday);
-      renderReviewScreen(container, monday, blocks, catalog);
+      renderReviewScreen(container, monday, blocks, catalog, linkCatalog);
     });
   }
 
@@ -149,7 +155,7 @@ Barfiks 3 set 5-6 tekrar
       parseWeeklyProgramText(text).map((b) => enrichBlock(b, catalog)),
       monday,
     );
-    renderReviewScreen(container, monday, blocks, catalog);
+    renderReviewScreen(container, monday, blocks, catalog, linkCatalog);
   });
 }
 
@@ -274,7 +280,7 @@ function describeExistingEntry(dateIso) {
   return `Bu günde zaten kayıt var: ${parts.join(' · ')}. Yeni egzersizler bunun üzerine eklenecek.`;
 }
 
-function renderReviewScreen(container, monday, blocks, catalog) {
+function renderReviewScreen(container, monday, blocks, catalog, linkCatalog) {
   // Bu ekrana ulaşıldıysa hedef hafta KESİNLİKLE boş (renderPasteScreen zaten
   // doluyken bu akışa hiç girmiyor) — bkz. assignProgram.js'teki AYNI mantık.
   const assignmentSeq = suggestNextAssignmentSeq();
@@ -286,19 +292,35 @@ function renderReviewScreen(container, monday, blocks, catalog) {
     </div>
     <p class="muted bulk-intro">${blocks.length} gün bulundu · <strong>${weekRangeLabel(monday)}</strong> haftasına atanacak <span class="week-conflict-id">(Program #${assignmentSeq})</span>.</p>
     <p class="muted bulk-intro">${catalog ? 'Kırmızı çerçeveli egzersizler kataloğa eşleşmedi, kendin seç. ' : ''}Yanlış ayrıştırılan bir alan varsa düzelt, sonra onayla.</p>
+    ${blocks.length > 1 ? `
+    <div class="toggle-all-row">
+      <button type="button" id="expand-all-btn">Tümünü Aç</button><span class="toggle-all-dot">·</span><button type="button" id="collapse-all-btn">Tümünü Kapat</button>
+    </div>` : ''}
     <div id="blocks-root"></div>
     <button type="button" class="btn btn-primary btn-block" id="confirm-btn">Onayla ve Ekle</button>
   `;
 
   container.querySelector('#back-to-paste-btn').addEventListener('click', () => {
-    renderPasteScreen(container, monday, catalog);
+    renderPasteScreen(container, monday, catalog, linkCatalog);
   });
 
   const blocksRoot = container.querySelector('#blocks-root');
   // assignProgram.js'teki AYNI varsayılan — hepsi kapalı, bkz. oradaki yorum.
   blocks.forEach((block) => {
-    blocksRoot.appendChild(buildBlockCard(block, catalog, false));
+    blocksRoot.appendChild(buildBlockCard(block, catalog, false, linkCatalog));
   });
+
+  // assignProgram.js'teki AYNI tümünü aç/kapat — bkz. oradaki yorum.
+  const expandAllBtn = container.querySelector('#expand-all-btn');
+  const collapseAllBtn = container.querySelector('#collapse-all-btn');
+  if (expandAllBtn) {
+    expandAllBtn.addEventListener('click', () => {
+      blocksRoot.querySelectorAll('.block-acc-header, .block-acc-body').forEach((el) => el.classList.remove('collapsed'));
+    });
+    collapseAllBtn.addEventListener('click', () => {
+      blocksRoot.querySelectorAll('.block-acc-header, .block-acc-body').forEach((el) => el.classList.add('collapsed'));
+    });
+  }
 
   container.querySelector('#confirm-btn').addEventListener('click', async () => {
     const unresolved = blocksRoot.querySelector('.bulk-ex-name-select.unresolved');
@@ -316,7 +338,7 @@ function renderReviewScreen(container, monday, blocks, catalog) {
   });
 }
 
-function buildBlockCard(block, catalog, startOpen) {
+function buildBlockCard(block, catalog, startOpen, linkCatalog) {
   const card = document.createElement('div');
   card.className = 'card bulk-block-card';
 
@@ -391,7 +413,7 @@ function buildBlockCard(block, catalog, startOpen) {
 
   const exList = card.querySelector('.block-exercise-list');
   block.exercises.forEach((ex) => {
-    exList.appendChild(buildExerciseRow(ex, block, exList, catalog));
+    exList.appendChild(buildExerciseRow(ex, block, exList, catalog, linkCatalog));
   });
 
   return card;
@@ -543,9 +565,19 @@ function openRangePicker({ title, max, current, allowFailure, onSelect }) {
   render();
 }
 
-function buildExerciseRow(ex, block, exList, catalog) {
+function buildExerciseRow(ex, block, exList, catalog, linkCatalog) {
   const row = document.createElement('div');
   row.className = 'bulk-exercise-row';
+
+  // Serbest-metin modda (catalog yok) bu isim zaten kütüphaneye bağlı bir
+  // yerel kayıtla eşleşiyor mu — bağlıysa isim kutusu kilitlenip "✓ Kütüphane:
+  // ..." rozeti gösteriliyor, "değiştir" ile tekrar açılabiliyor. linkCatalog
+  // sadece coach kendi hesabında (Kendi Antrenmanım) VE katalog gerçekten
+  // erişilebilirse dolu geliyor — bkz. getCoachOwnCatalogForLinking.
+  const existingLocal = !catalog ? exercises.active().find((e) => normalizeForMatch(e.name) === normalizeForMatch(ex.name)) : null;
+  const linkedCatalogName = existingLocal?.sourceCatalogId && linkCatalog
+    ? (linkCatalog.find((c) => c.id === existingLocal.sourceCatalogId)?.name || existingLocal.name)
+    : null;
 
   let nameFieldHtml;
   if (catalog) {
@@ -567,7 +599,14 @@ function buildExerciseRow(ex, block, exList, catalog) {
       </div>
     `;
   } else {
-    nameFieldHtml = `<input type="text" class="bulk-ex-name" value="${escapeHtml(ex.name)}" placeholder="Egzersiz adı">`;
+    nameFieldHtml = `
+      <div class="bulk-ex-name-wrap">
+        <input type="text" class="bulk-ex-name" value="${escapeHtml(ex.name)}" placeholder="Egzersiz adı"${linkedCatalogName ? ' disabled' : ''}>
+        ${linkCatalog && linkCatalog.length ? `<div class="link-catalog-area">${linkedCatalogName
+          ? `<span class="linked-tag"><span class="linked-chk">✓</span> Kütüphane: ${escapeHtml(linkedCatalogName)} <button type="button" class="link-change-btn">değiştir</button></span>`
+          : `<button type="button" class="link-btn">Kütüphaneden eşleştir</button>`}</div>` : ''}
+      </div>
+    `;
   }
 
   row.innerHTML = `
@@ -616,9 +655,49 @@ function buildExerciseRow(ex, block, exList, catalog) {
       suggestBtn.addEventListener('click', () => resolveSelection(suggestBtn.dataset.suggestId));
     }
   } else {
-    row.querySelector('.bulk-ex-name').addEventListener('input', (e) => {
+    const nameInput = row.querySelector('.bulk-ex-name');
+    nameInput.addEventListener('input', (e) => {
       ex.name = e.target.value;
     });
+
+    // "Kütüphaneden eşleştir" / "değiştir" — bkz. bu değişikliğin geldiği sohbet.
+    // Seçim onaylandığı ANDA kalıcı: hangi yerel egzersizin bağlanacağı isme göre
+    // bulunuyor/oluşturuluyor (commitBlocks'un aynı find-or-create mantığı), sonra
+    // exercises.bindToCatalog VAR OLAN kaydı yerinde günceller — bu sayede o ismin
+    // geçmişteki VE gelecekteki tüm günleri, hiçbirine tek tek dokunmadan otomatik
+    // bağlanmış olur. Onay ekranında "Onayla"ya basılmasını beklemiyor, tıpkı
+    // Egzersiz Kütüphanesi'nde isim/video değiştirmenin anında kalıcı olması gibi.
+    function wireLinkArea() {
+      const area = row.querySelector('.link-catalog-area');
+      if (!area) return;
+      const openBtn = area.querySelector('.link-btn, .link-change-btn');
+      if (!openBtn) return;
+      openBtn.addEventListener('click', () => {
+        openPicker({
+          title: 'Kütüphaneden Eşleştir',
+          items: linkCatalog,
+          emptyMessage: 'Eşleşen kayıt yok.',
+          onSelect: async (catalogId) => {
+            const catalogEx = linkCatalog.find((c) => c.id === catalogId);
+            if (!catalogEx) return;
+            const proceed = await confirmSheet(
+              `"${ex.name}" artık kütüphanedeki "${catalogEx.name}" ile aynı sayılacak. İsim buna göre güncellenecek, kütüphanede video/hedef bölge varsa oradan gelecek. Bu egzersizin geçmiş ve gelecekteki TÜM kayıtları bu eşleşmeyi kullanacak.`,
+              { confirmLabel: 'Eşleştir', danger: false },
+            );
+            if (!proceed) return;
+            let localEx = exercises.active().find((e) => normalizeForMatch(e.name) === normalizeForMatch(ex.name));
+            if (!localEx) localEx = exercises.add(ex.name);
+            exercises.bindToCatalog(localEx.id, catalogEx);
+            ex.name = catalogEx.name;
+            nameInput.value = catalogEx.name;
+            nameInput.disabled = true;
+            area.innerHTML = `<span class="linked-tag"><span class="linked-chk">✓</span> Kütüphane: ${escapeHtml(catalogEx.name)} <button type="button" class="link-change-btn">değiştir</button></span>`;
+            wireLinkArea();
+          },
+        });
+      });
+    }
+    wireLinkArea();
   }
 
   row.querySelector('.bulk-ex-field[data-field="weight"]').addEventListener('input', (e) => {

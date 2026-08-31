@@ -575,6 +575,10 @@ function renderReviewScreen(container, student, state, monday, assignMonday, blo
     <p class="muted bulk-intro">Öğrenci: <strong>${escapeHtml(student.displayName)}</strong></p>
     <p class="muted bulk-intro">${blocks.length} gün bulundu · <strong>${weekRangeLabel(assignMonday)}</strong> haftasına atanacak <span class="week-conflict-id">(Program #${assignmentSeq})</span>.</p>
     <p class="muted bulk-intro">Kırmızı çerçeveli egzersizler kataloğa eşleşmedi, kendin seç. Yanlış ayrıştırılan başka bir alan varsa düzelt, sonra onayla.</p>
+    ${blocks.length > 1 ? `
+    <div class="toggle-all-row">
+      <button type="button" id="expand-all-btn">Tümünü Aç</button><span class="toggle-all-dot">·</span><button type="button" id="collapse-all-btn">Tümünü Kapat</button>
+    </div>` : ''}
     <div id="blocks-root"></div>
     <button type="button" class="btn btn-primary btn-block" id="confirm-btn">Onayla ve Ata</button>
   `;
@@ -589,6 +593,19 @@ function renderReviewScreen(container, student, state, monday, assignMonday, blo
   // olmadan görüp öyle isteğine göre tek tek açmak istiyor. Her kart bağımsız
   // açılıp kapanıyor.
   blocks.forEach((block) => blocksRoot.appendChild(buildBlockCard(block, state, catalog, false)));
+
+  // Birden fazla gün olunca hepsini tek tek açıp kapatmak yorucu oluyor —
+  // kullanıcının kendi isteği (bkz. bu değişikliğin geldiği sohbet).
+  const expandAllBtn = container.querySelector('#expand-all-btn');
+  const collapseAllBtn = container.querySelector('#collapse-all-btn');
+  if (expandAllBtn) {
+    expandAllBtn.addEventListener('click', () => {
+      blocksRoot.querySelectorAll('.block-acc-header, .block-acc-body').forEach((el) => el.classList.remove('collapsed'));
+    });
+    collapseAllBtn.addEventListener('click', () => {
+      blocksRoot.querySelectorAll('.block-acc-header, .block-acc-body').forEach((el) => el.classList.add('collapsed'));
+    });
+  }
 
   const confirmBtn = container.querySelector('#confirm-btn');
   confirmBtn.addEventListener('click', async () => {

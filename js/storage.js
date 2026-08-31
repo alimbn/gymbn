@@ -166,6 +166,23 @@ export const exercises = {
     saveState(false);
     return item;
   },
+  // resolveFromCatalog'dan FARKLI: burada hangi yerel egzersizin bağlanacağı
+  // zaten BİLİNİYOR (id ile) — elle yazılmış eski bir kaydı (ör. "bench press")
+  // kütüphanedeki gerçek karşılığıyla eşleştirmek için, YENİ bir kayıt açmak
+  // yerine VAR OLANI yerinde günceller. Bu sayede o egzersizin geçmişteki VE
+  // gelecekteki tüm günleri (hepsi bu id'yi referans alıyor) tek işlemle
+  // kütüphaneye bağlanmış olur — dayEntries'e hiç dokunmaya gerek yok.
+  bindToCatalog: (id, catalogEx) => {
+    const item = libraryItemById('exercises', id);
+    if (!item) return null;
+    item.sourceCatalogId = catalogEx.id;
+    item.name = catalogEx.name;
+    item.isDuration = !!catalogEx.isDuration;
+    item.videoUrl = catalogEx.videoUrl || '';
+    item.targetRegions = catalogEx.targetRegions || [];
+    saveState(false);
+    return item;
+  },
 };
 
 export const dayTypes = {

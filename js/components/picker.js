@@ -1,4 +1,4 @@
-import { escapeHtml } from '../util.js';
+import { escapeHtml, normalizeForMatch } from '../util.js';
 
 export function openPicker({ title, items, onSelect, emptyMessage }) {
   const backdrop = document.createElement('div');
@@ -16,9 +16,14 @@ export function openPicker({ title, items, onSelect, emptyMessage }) {
   const searchInput = backdrop.querySelector('.sheet-search-input');
   const listEl = backdrop.querySelector('.sheet-list');
 
+  // normalizeForMatch kullanıyoruz, toLocaleLowerCase('tr-TR') DEĞİL — aynı
+  // Türkçe büyük/küçük "I" hatası burada da vardı (bkz. exerciseCatalog.js/
+  // targetRegions.js'teki aynı düzeltme): İngilizce kökenli isimlerde ("Incline"
+  // gibi) büyük I'nın Türkçe locale'de noktasız "ı"ya dönüşmesi, kullanıcının
+  // yazdığı küçük "i" ile eşleşmemesine yol açıyordu.
   function renderList(filterText) {
-    const q = filterText.trim().toLocaleLowerCase('tr-TR');
-    const filtered = q ? items.filter((it) => it.name.toLocaleLowerCase('tr-TR').includes(q)) : items;
+    const q = normalizeForMatch(filterText);
+    const filtered = q ? items.filter((it) => normalizeForMatch(it.name).includes(q)) : items;
     if (!filtered.length) {
       listEl.innerHTML = `<p class="sheet-empty">${escapeHtml(emptyMessage || 'Sonuç yok.')}</p>`;
       return;
