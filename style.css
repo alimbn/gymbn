@@ -2051,6 +2051,30 @@ a.list-item {
   color: var(--text-muted);
 }
 
+/* Aynı haftaya iki program çakışmasını görünür kılıyor — bkz.
+   getWeekConflict()/assignProgram.js ve bulkAdd.js'teki aynı akış. */
+.week-conflict-banner {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  background: rgba(192,134,60,0.12);
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.week-conflict-banner .week-conflict-flag {
+  flex-shrink: 0;
+}
+
+.week-conflict-id {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
 /* Ağırlık/Set/Tekrar/Rir'in üstünde kalıcı etiket — dayEntry.js'in "Hoca" bloğundaki
    aynı fikir (değer girilince placeholder'ın kaybolup hangi alan olduğunu belirsiz
    bırakması sorununu çözüyor), ama görsel olarak bu ekranın kendi kutulu input
@@ -2750,6 +2774,7 @@ body.chrome-hidden .rest-timer-btn {
   color: var(--text-muted);
   line-height: 1.5;
   margin: 0 0 var(--space-4);
+  white-space: pre-line;
 }
 
 .confirm-sheet-actions {

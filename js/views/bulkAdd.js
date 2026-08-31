@@ -1,6 +1,6 @@
 import {
   dayTypes, exercises, createDayEntry, getDayEntryByDate, getDayEntries, suggestNextDayNumber,
-  addExerciseInstanceWithPrescribed, updateDayEntryField,
+  addExerciseInstanceWithPrescribed, updateDayEntryField, deleteDayEntry,
 } from '../storage.js';
 import {
   normalizeForMatch, addDaysIso, mondayOfWeek, todayIso, escapeHtml, formatDateShortTr, statusBadge,
@@ -33,7 +33,55 @@ export async function render(container, params) {
   renderPasteScreen(container, monday, catalog);
 }
 
+function weekDates(monday) { return Array.from({ length: 7 }, (_, i) => addDaysIso(monday, i)); }
+function weekRangeLabel(monday) { return `${formatDateShortTr(monday)} – ${formatDateShortTr(addDaysIso(monday, 6))}`; }
+
+// assignProgram.js'teki AYNI "aynı haftaya 2. program giremezsin" kuralı — bkz.
+// oradaki yorum. TEK fark: bu ekrana zaten week.js'in ‹ › gezinmesinden
+// gelinebiliyor, o yüzden burada assignProgram.js gibi otomatik "sıradaki boş
+// haftaya atla" YOK — hafta doluysa sadece engelleniyor, kullanıcı ya siler ya
+// da zaten sahip olduğu gezinmeyle kendi başka bir haftaya gider.
+function weekIsOccupied(monday) {
+  return weekDates(monday).some((d) => { const e = getDayEntryByDate(d); return e && e.exercises.length > 0; });
+}
+
+function findWeekAssignmentSeq(monday) {
+  for (const d of weekDates(monday)) {
+    const e = getDayEntryByDate(d);
+    if (e && e.exercises.length) return e.assignmentSeq ?? null;
+  }
+  return null;
+}
+
+// assignProgram.js'teki suggestNextAssignmentSeq'in AYNI mantığı — bkz. oradaki yorum.
+function suggestNextAssignmentSeq() {
+  const max = Math.max(0, ...getDayEntries().map((d) => Number(d.assignmentSeq) || 0));
+  return max + 1;
+}
+
+function countTouchedExercisesInWeek(monday) {
+  let count = 0;
+  for (const d of weekDates(monday)) {
+    const entry = getDayEntryByDate(d);
+    if (!entry) continue;
+    for (const inst of entry.exercises) {
+      if (inst.actualSets.some((s) => s.touched)) count++;
+    }
+  }
+  return count;
+}
+
+function deleteWeekAssignment(monday) {
+  for (const d of weekDates(monday)) {
+    const entry = getDayEntryByDate(d);
+    if (entry) deleteDayEntry(entry.id);
+  }
+}
+
 function renderPasteScreen(container, monday, catalog) {
+  const occupied = weekIsOccupied(monday);
+  const conflictSeq = occupied ? findWeekAssignmentSeq(monday) : null;
+
   // assignProgram.js'teki AYNI "en son dolu haftayı kopyala" kısayolu — bkz.
   // oradaki yorum. Bireysel/coach-yönetimli her iki modda da çalışıyor, sadece
   // kataloğa eşleşme kavramı (catalog varsa) korunuyor.
@@ -45,22 +93,47 @@ function renderPasteScreen(container, monday, catalog) {
       <h2 class="view-title">Programı Yapıştır</h2>
       <span></span>
     </div>
-    ${sourceMonday ? `
-      <button type="button" class="btn btn-block" id="copy-prev-week-btn">↻ ${formatDateShortTr(sourceMonday)} – ${formatDateShortTr(addDaysIso(sourceMonday, 6))} Programını Kopyala</button>
-      <p class="muted" style="text-align:center; margin:var(--space-2) 0 var(--space-4);">veya</p>
-    ` : ''}
-    <p class="muted bulk-intro">Hocanın attığı haftalık programı, gün başlıklarının arasında boş satır bırakarak aşağıya yapıştır:</p>
-    <textarea id="paste-textarea" class="bulk-textarea" placeholder="Anterior - 1
+    ${occupied ? `
+      <div class="week-conflict-banner">
+        <span class="week-conflict-flag">⚠</span>
+        <div>
+          <strong>${weekRangeLabel(monday)}</strong> haftasına zaten bir program eklenmiş${conflictSeq ? ` <span class="week-conflict-id">(Program #${conflictSeq})</span>` : ''}.
+          Devam etmek için önce bu haftanın programını silmen ya da başka bir haftaya gitmen gerekiyor.
+        </div>
+      </div>
+      <button type="button" class="btn btn-block btn-danger" id="delete-week-btn">🗑 ${weekRangeLabel(monday)} Haftasının Programını Sil</button>
+    ` : `
+      ${sourceMonday ? `
+        <button type="button" class="btn btn-block" id="copy-prev-week-btn">↻ ${weekRangeLabel(sourceMonday)} Programını Kopyala</button>
+        <p class="muted" style="text-align:center; margin:var(--space-2) 0 var(--space-4);">veya</p>
+      ` : ''}
+      <p class="muted bulk-intro">Hocanın attığı haftalık programı, gün başlıklarının arasında boş satır bırakarak aşağıya yapıştır:</p>
+      <textarea id="paste-textarea" class="bulk-textarea" placeholder="Anterior - 1
 dumbell shoulder press 2 set 8-9 tekrar 12.5kg
 ...
 
 Posterior - 1
 Barfiks 3 set 5-6 tekrar
 ..."></textarea>
-    <button type="button" class="btn btn-primary btn-block" id="parse-btn">Ayrıştır</button>
+      <button type="button" class="btn btn-primary btn-block" id="parse-btn">Ayrıştır</button>
+    `}
   `;
 
   container.querySelector('#back-btn').addEventListener('click', () => history.back());
+
+  if (occupied) {
+    container.querySelector('#delete-week-btn').addEventListener('click', async () => {
+      const touchedCount = countTouchedExercisesInWeek(monday);
+      const idSuffix = conflictSeq ? ` (Program #${conflictSeq})` : '';
+      const message = touchedCount
+        ? `${weekRangeLabel(monday)} haftasının programı${idSuffix} tamamen silinecek.\n\n⚠ Bu haftada ${touchedCount} egzersiz gerçekten işaretlenmiş — gerçek antrenman verisi var. Yine de silinsin mi?`
+        : `${weekRangeLabel(monday)} haftasının programı${idSuffix} silinsin mi?`;
+      if (!(await confirmSheet(message, { confirmLabel: 'Sil' }))) return;
+      deleteWeekAssignment(monday);
+      renderPasteScreen(container, monday, catalog);
+    });
+    return;
+  }
 
   if (sourceMonday) {
     container.querySelector('#copy-prev-week-btn').addEventListener('click', () => {
@@ -202,13 +275,17 @@ function describeExistingEntry(dateIso) {
 }
 
 function renderReviewScreen(container, monday, blocks, catalog) {
+  // Bu ekrana ulaşıldıysa hedef hafta KESİNLİKLE boş (renderPasteScreen zaten
+  // doluyken bu akışa hiç girmiyor) — bkz. assignProgram.js'teki AYNI mantık.
+  const assignmentSeq = suggestNextAssignmentSeq();
   container.innerHTML = `
     <div class="view-header">
       <button type="button" class="back-link" id="back-to-paste-btn" aria-label="Geri">←</button>
       <h2 class="view-title">Önizleme</h2>
       <span></span>
     </div>
-    <p class="muted bulk-intro">${blocks.length} gün bulundu. ${catalog ? 'Kırmızı çerçeveli egzersizler kataloğa eşleşmedi, kendin seç. ' : ''}Yanlış ayrıştırılan bir alan varsa düzelt, sonra onayla.</p>
+    <p class="muted bulk-intro">${blocks.length} gün bulundu · <strong>${weekRangeLabel(monday)}</strong> haftasına atanacak <span class="week-conflict-id">(Program #${assignmentSeq})</span>.</p>
+    <p class="muted bulk-intro">${catalog ? 'Kırmızı çerçeveli egzersizler kataloğa eşleşmedi, kendin seç. ' : ''}Yanlış ayrıştırılan bir alan varsa düzelt, sonra onayla.</p>
     <div id="blocks-root"></div>
     <button type="button" class="btn btn-primary btn-block" id="confirm-btn">Onayla ve Ekle</button>
   `;
@@ -233,7 +310,7 @@ function renderReviewScreen(container, monday, blocks, catalog) {
     if (skipped && !(await confirmSheet(`${skipped} gün tarihe atanmadığı için eklenmeyecek. Devam edilsin mi?`, { confirmLabel: 'Devam Et', danger: false }))) {
       return;
     }
-    commitBlocks(blocks, catalog);
+    commitBlocks(blocks, catalog, assignmentSeq);
     location.hash = '#/week/' + monday;
   });
 }
@@ -568,7 +645,7 @@ function buildExerciseRow(ex, block, exList, catalog) {
   return row;
 }
 
-function commitBlocks(blocks, catalog) {
+function commitBlocks(blocks, catalog, assignmentSeq) {
   for (const block of blocks) {
     if (!block.assignedDate) continue;
 
@@ -585,6 +662,7 @@ function commitBlocks(blocks, catalog) {
       // that's already set — bulk-add should never silently relabel a day.
       updateDayEntryField(entry.id, 'dayTypeId', dayTypeId, false);
     }
+    updateDayEntryField(entry.id, 'assignmentSeq', assignmentSeq, false);
 
     for (const ex of block.exercises) {
       let exercise;

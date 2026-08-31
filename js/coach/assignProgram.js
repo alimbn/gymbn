@@ -40,6 +40,80 @@ function createDayEntry(state, { date, dayNumber, dayTypeId }) {
   return entry;
 }
 
+function weekDates(monday) { return Array.from({ length: 7 }, (_, i) => addDaysIso(monday, i)); }
+
+// Bir haftanın en az bir egzersizli günü var mı — "aynı haftaya 2. program
+// giremezsin" kuralının temeli. Boş gün kayıtları (dayType seçilmiş ama hiç
+// egzersiz eklenmemiş) işgal sayılmıyor, tıpkı findMostRecentSourceWeek'te olduğu gibi.
+function weekIsOccupied(state, monday) {
+  return weekDates(monday).some((d) => { const e = findDayEntryByDate(state, d); return e && e.exercises.length > 0; });
+}
+
+// Haftayı işgal eden ilk günün assignmentSeq'i — bu alan bu özellikten ÖNCE
+// oluşturulmuş eski kayıtlarda hiç yok, o yüzden null dönebilir; çağıran taraf
+// numarasız bir uyarı gösteriyor o durumda.
+function findWeekAssignmentSeq(state, monday) {
+  for (const d of weekDates(monday)) {
+    const e = findDayEntryByDate(state, d);
+    if (e && e.exercises.length) return e.assignmentSeq ?? null;
+  }
+  return null;
+}
+
+// `startMonday`den başlayıp (dahil), hiç egzersizli günü olmayan ilk haftayı
+// bulana kadar hafta hafta ileri gidiyor. 2 yıllık güvenlik sınırı sadece
+// pratikte hiç ulaşılmayacak bir sonsuz döngüyü engellemek için.
+function findNextEmptyWeek(state, startMonday) {
+  let candidate = startMonday;
+  for (let i = 0; i < 104; i++) {
+    if (!weekIsOccupied(state, candidate)) return candidate;
+    candidate = addDaysIso(candidate, 7);
+  }
+  return candidate;
+}
+
+// Bu haftaya YENİ bir program atanacaksa hangi haftaya gideceğini ve varsa
+// çakışan mevcut programın kimliğini tek yerde topluyor.
+function getWeekConflict(state, monday) {
+  if (!weekIsOccupied(state, monday)) return { occupied: false, seq: null, targetMonday: monday };
+  return {
+    occupied: true,
+    seq: findWeekAssignmentSeq(state, monday),
+    targetMonday: findNextEmptyWeek(state, addDaysIso(monday, 7)),
+  };
+}
+
+// Her "Onayla ve Ata" tıklaması, öğrencinin tüm kayıtları arasında tekil bir
+// sıra numarası alıyor (öğrenciye özel — state başka birinin verisi değil).
+// Bir sorun çıkarsa "hangi atama bu günü oluşturdu" diye kolayca tespit edilsin
+// diye — kullanıcının kendi isteği.
+function suggestNextAssignmentSeq(state) {
+  const max = Math.max(0, ...state.dayEntries.map((d) => Number(d.assignmentSeq) || 0));
+  return max + 1;
+}
+
+// Silme onayında "burada gerçek veri var mı" uyarısı için — kaç egzersizin en
+// az bir seti gerçekten işaretlenmiş, bkz. buildLastTimeInfo'daki AYNI kontrol.
+function countTouchedExercisesInWeek(state, monday) {
+  let count = 0;
+  for (const d of weekDates(monday)) {
+    const entry = findDayEntryByDate(state, d);
+    if (!entry) continue;
+    for (const inst of entry.exercises) {
+      if (inst.actualSets.some((s) => s.touched)) count++;
+    }
+  }
+  return count;
+}
+
+// Hocanın yanlış attığı bir haftayı geri almasını sağlıyor — o haftanın 7
+// tarihindeki gün kayıtlarını (boş olanlar dahil) tamamen kaldırıyor, hafta
+// gerçekten "boş" sayılsın diye.
+function deleteWeekAssignment(state, monday) {
+  const dates = new Set(weekDates(monday));
+  state.dayEntries = state.dayEntries.filter((d) => !dates.has(d.date));
+}
+
 // storage.js'in (module-private, export edilmemiş) buildActualSetsFromPrescribed'ıyla
 // AYNI mantığın kasıtlı küçük kopyası — bkz. dosya başındaki not.
 function extractLeadingInt(str, fallback) {
@@ -248,6 +322,10 @@ export async function render(container, { studentUid }) {
   renderPasteScreen(container, student, state, monday, catalog);
 }
 
+function weekRangeLabel(monday) {
+  return `${formatDateShortTr(monday)} – ${formatDateShortTr(addDaysIso(monday, 6))}`;
+}
+
 function renderLoadingScreen(container) {
   container.innerHTML = '<p class="empty-state">Yükleniyor…</p>';
 }
@@ -264,14 +342,19 @@ function renderErrorScreen(container, studentUid, message) {
 }
 
 function renderPasteScreen(container, student, state, monday, catalog) {
-  // En son eklenen programı kopyalama — kullanıcının isteği, "yapıştır+ayrıştır"
-  // yapılmış gibi AYNI önizleme ekranına düşüyor, sadece kaynak metin yerine
-  // öğrencinin GERÇEKTEN kayıtlı en son dolu haftası. Sabit "geçen hafta" DEĞİL —
-  // öğrenci ara vermiş/tatile gitmiş olabilir, o yüzden bu haftadan önceki, en az
-  // bir egzersizli günü olan en son haftayı arıyoruz (1 hafta önce de olsa 10 hafta
-  // önce de olsa fark etmez). Hiç böyle bir hafta yoksa (henüz hiç program
-  // atanmamışsa) düğme hiç gösterilmiyor — boşa tıklanacak bir şey olmasın diye.
-  const sourceMonday = findMostRecentSourceWeek(state, monday);
+  // Aynı haftaya 2. bir program giremiyoruz (kullanıcının isteği) — bu hafta
+  // zaten dolu ise yeni program otomatik olarak sıradaki BOŞ haftaya gidiyor,
+  // hafta gezinmesi hiç eklemeden (bu ekranın zaten hiç hafta navigasyonu yok).
+  // Coach isterse aynı yerden çakışan haftayı silip bu haftaya girmeyi tercih edebilir.
+  const conflict = getWeekConflict(state, monday);
+  const assignMonday = conflict.targetMonday;
+
+  // En son eklenen programı kopyalama — "yapıştır+ayrıştır" yapılmış gibi AYNI
+  // önizleme ekranına düşüyor, sadece kaynak metin yerine öğrencinin GERÇEKTEN
+  // kayıtlı en son dolu haftası. Sabit "geçen hafta" DEĞİL — hedef haftadan (artık
+  // her zaman bu hafta olmayabilir) önceki, en az bir egzersizli günü olan en son
+  // haftayı arıyoruz. Hiç böyle bir hafta yoksa düğme hiç gösterilmiyor.
+  const sourceMonday = findMostRecentSourceWeek(state, assignMonday);
 
   container.innerHTML = `
     <div class="view-header">
@@ -280,8 +363,19 @@ function renderPasteScreen(container, student, state, monday, catalog) {
       <span></span>
     </div>
     <p class="muted bulk-intro">Öğrenci: <strong>${escapeHtml(student.displayName)}</strong></p>
+    ${conflict.occupied ? `
+      <div class="week-conflict-banner">
+        <span class="week-conflict-flag">⚠</span>
+        <div>
+          <strong>${weekRangeLabel(monday)}</strong> haftasına zaten bir program atanmış${conflict.seq ? ` <span class="week-conflict-id">(Program #${conflict.seq})</span>` : ''}.
+          Devam edersen yeni program otomatik olarak <strong>${weekRangeLabel(assignMonday)}</strong> haftasına atanacak.
+        </div>
+      </div>
+      <button type="button" class="btn btn-block btn-danger" id="delete-week-btn">🗑 ${weekRangeLabel(monday)} Haftasının Programını Sil</button>
+      <p class="muted" style="text-align:center; margin:var(--space-2) 0 var(--space-4);">veya</p>
+    ` : ''}
     ${sourceMonday ? `
-      <button type="button" class="btn btn-block" id="copy-prev-week-btn">↻ ${formatDateShortTr(sourceMonday)} – ${formatDateShortTr(addDaysIso(sourceMonday, 6))} Programını Kopyala</button>
+      <button type="button" class="btn btn-block" id="copy-prev-week-btn">↻ ${weekRangeLabel(sourceMonday)} Programını Kopyala</button>
       <p class="muted" style="text-align:center; margin:var(--space-2) 0 var(--space-4);">veya</p>
     ` : ''}
     <p class="muted bulk-intro">Haftalık programı, gün başlıklarının arasında boş satır bırakarak aşağıya yapıştır:</p>
@@ -295,10 +389,36 @@ Barfiks 3 set 5-6 tekrar
     <button type="button" class="btn btn-primary btn-block" id="parse-btn">Ayrıştır</button>
   `;
 
+  if (conflict.occupied) {
+    container.querySelector('#delete-week-btn').addEventListener('click', async () => {
+      const touchedCount = countTouchedExercisesInWeek(state, monday);
+      const idSuffix = conflict.seq ? ` (Program #${conflict.seq})` : '';
+      const message = touchedCount
+        ? `${weekRangeLabel(monday)} haftasının programı${idSuffix} tamamen silinecek.\n\n⚠ Bu haftada ${touchedCount} egzersiz gerçekten işaretlenmiş — öğrenci bu haftadan gerçek antrenman verisi girmiş. Yine de silinsin mi?`
+        : `${weekRangeLabel(monday)} haftasının programı${idSuffix} silinsin mi?`;
+      if (!(await confirmSheet(message, { confirmLabel: 'Sil' }))) return;
+
+      const deleteBtn = container.querySelector('#delete-week-btn');
+      deleteBtn.disabled = true;
+      deleteBtn.textContent = 'Siliniyor…';
+      try {
+        deleteWeekAssignment(state, monday);
+        await setStudentAppState(student.id, state);
+      } catch (err) {
+        console.error('Hafta silinemedi', err);
+        alert('Silinemedi, internet bağlantını kontrol edip tekrar dene.');
+        deleteBtn.disabled = false;
+        deleteBtn.textContent = `🗑 ${weekRangeLabel(monday)} Haftasının Programını Sil`;
+        return;
+      }
+      renderPasteScreen(container, student, state, monday, catalog);
+    });
+  }
+
   if (sourceMonday) {
     container.querySelector('#copy-prev-week-btn').addEventListener('click', () => {
-      const blocks = assignDefaultDates(buildBlocksFromExistingWeek(state, catalog, sourceMonday), state, monday);
-      renderReviewScreen(container, student, state, monday, blocks, catalog);
+      const blocks = assignDefaultDates(buildBlocksFromExistingWeek(state, catalog, sourceMonday), state, assignMonday);
+      renderReviewScreen(container, student, state, monday, assignMonday, blocks, catalog);
     });
   }
 
@@ -307,9 +427,9 @@ Barfiks 3 set 5-6 tekrar
     if (!text.trim()) return;
     const blocks = assignDefaultDates(
       parseWeeklyProgramText(text).map((b) => enrichBlock(b, state, catalog)),
-      state, monday,
+      state, assignMonday,
     );
-    renderReviewScreen(container, student, state, monday, blocks, catalog);
+    renderReviewScreen(container, student, state, monday, assignMonday, blocks, catalog);
   });
 }
 
@@ -441,7 +561,11 @@ function describeExistingEntry(state, dateIso) {
   return `Bu günde zaten kayıt var: ${parts.join(' · ')}. Yeni egzersizler bunun üzerine eklenecek.`;
 }
 
-function renderReviewScreen(container, student, state, monday, blocks, catalog) {
+function renderReviewScreen(container, student, state, monday, assignMonday, blocks, catalog) {
+  // Bu ekrana geldiğimizde hedef hafta KESİNLİKLE boş (getWeekConflict zaten
+  // öyle bir hafta bulmuştu) — o yüzden commitBlocks'un dokunacağı her gün
+  // yepyeni, aynı tek atamaya (assignmentSeq) ait olacak.
+  const assignmentSeq = suggestNextAssignmentSeq(state);
   container.innerHTML = `
     <div class="view-header">
       <button type="button" class="back-link" id="back-to-paste-btn" aria-label="Geri">←</button>
@@ -449,7 +573,8 @@ function renderReviewScreen(container, student, state, monday, blocks, catalog) 
       <span></span>
     </div>
     <p class="muted bulk-intro">Öğrenci: <strong>${escapeHtml(student.displayName)}</strong></p>
-    <p class="muted bulk-intro">${blocks.length} gün bulundu. Kırmızı çerçeveli egzersizler kataloğa eşleşmedi, kendin seç. Yanlış ayrıştırılan başka bir alan varsa düzelt, sonra onayla.</p>
+    <p class="muted bulk-intro">${blocks.length} gün bulundu · <strong>${weekRangeLabel(assignMonday)}</strong> haftasına atanacak <span class="week-conflict-id">(Program #${assignmentSeq})</span>.</p>
+    <p class="muted bulk-intro">Kırmızı çerçeveli egzersizler kataloğa eşleşmedi, kendin seç. Yanlış ayrıştırılan başka bir alan varsa düzelt, sonra onayla.</p>
     <div id="blocks-root"></div>
     <button type="button" class="btn btn-primary btn-block" id="confirm-btn">Onayla ve Ata</button>
   `;
@@ -476,7 +601,7 @@ function renderReviewScreen(container, student, state, monday, blocks, catalog) 
     confirmBtn.disabled = true;
     confirmBtn.textContent = 'Kaydediliyor…';
     try {
-      commitBlocks(state, blocks, catalog);
+      commitBlocks(state, blocks, catalog, assignmentSeq);
       await setStudentAppState(student.id, state);
       notifyStudentOfAssignment(student.id, blocks); // arka planda, redirect'i beklemiyor
       location.hash = '#/';
@@ -676,7 +801,7 @@ function resolveLocalExercise(state, catalogEx) {
   return exercise;
 }
 
-function commitBlocks(state, blocks, catalog) {
+function commitBlocks(state, blocks, catalog, assignmentSeq) {
   for (const block of blocks) {
     if (!block.assignedDate) continue;
 
@@ -691,6 +816,7 @@ function commitBlocks(state, blocks, catalog) {
     } else if (!entry.dayTypeId) {
       entry.dayTypeId = dayTypeId;
     }
+    entry.assignmentSeq = assignmentSeq;
 
     for (const ex of block.exercises) {
       if (!ex.catalogId) continue;
