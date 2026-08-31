@@ -584,10 +584,11 @@ function renderReviewScreen(container, student, state, monday, assignMonday, blo
   });
 
   const blocksRoot = container.querySelector('#blocks-root');
-  // İlk gün açık, gerisi kapalı geliyor — kullanıcının kendi isteği (A'nın
-  // başlık şeridi + B/C'nin aç/kapa akordiyonu birleşik). Her kart bağımsız
-  // açılıp kapanıyor, istenirse hepsi elle açılabiliyor.
-  blocks.forEach((block, i) => blocksRoot.appendChild(buildBlockCard(block, state, catalog, i === 0)));
+  // Hepsi kapalı geliyor — kullanıcının kendi isteği: önce tüm günlerin doğru
+  // yakalandığını (başlık + tarih + egzersiz sayısı) tek bakışta, dağınıklık
+  // olmadan görüp öyle isteğine göre tek tek açmak istiyor. Her kart bağımsız
+  // açılıp kapanıyor.
+  blocks.forEach((block) => blocksRoot.appendChild(buildBlockCard(block, state, catalog, false)));
 
   const confirmBtn = container.querySelector('#confirm-btn');
   confirmBtn.addEventListener('click', async () => {

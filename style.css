@@ -1965,19 +1965,29 @@ a.list-item {
   flex: 1;
   min-width: 0;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
+/* Onaylanan "A" demosuyla birebir aynı renk/harf muamelesi — sadece arka plan
+   şeridini kopyalayıp bunu unutmak, demonun "çok güzel" bulunan asıl farkını
+   kaybetmek olurdu (bkz. feedback_show_demo_before_design_changes). */
 .block-acc-header-title {
   font-weight: 700;
-  font-size: 14px;
-  letter-spacing: 0.01em;
+  font-size: 13.5px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--primary);
 }
 
 .block-acc-header-sub {
   font-size: 12px;
   color: var(--text-muted);
+}
+
+.block-acc-header-sub::before {
+  content: "· ";
 }
 
 .block-acc-badge {
@@ -2001,18 +2011,23 @@ a.list-item {
   transform: rotate(-90deg);
 }
 
+/* grid-template-rows: 1fr/0fr tekniği yerine max-height kullanıyoruz —
+   içerik uzunluğu egzersiz sayısına göre çok değişken, ve 1fr, boyu "auto"
+   olan bir kapsayıcıda beklendiği gibi genişlemiyor (test ederken yakalandı).
+   2000px sadece "gerçek içerikten kesin uzun" bir tavan, gerçek yükseklik hiç
+   önemli değil. overflow:hidden burada olduğu için .block-acc-body-inner'ın
+   KENDİ padding'i de kapalıyken otomatik klipleniyor, ayrıca sıfırlamaya gerek yok. */
 .block-acc-body {
-  display: grid;
-  grid-template-rows: 1fr;
-  transition: grid-template-rows 0.2s ease;
+  overflow: hidden;
+  max-height: 2000px;
+  transition: max-height 0.25s ease;
 }
 
 .block-acc-body.collapsed {
-  grid-template-rows: 0fr;
+  max-height: 0;
 }
 
 .block-acc-body-inner {
-  overflow: hidden;
   padding: var(--space-4);
 }
 

@@ -295,9 +295,9 @@ function renderReviewScreen(container, monday, blocks, catalog) {
   });
 
   const blocksRoot = container.querySelector('#blocks-root');
-  // assignProgram.js'teki AYNI varsayılan — ilk gün açık, gerisi kapalı.
-  blocks.forEach((block, i) => {
-    blocksRoot.appendChild(buildBlockCard(block, catalog, i === 0));
+  // assignProgram.js'teki AYNI varsayılan — hepsi kapalı, bkz. oradaki yorum.
+  blocks.forEach((block) => {
+    blocksRoot.appendChild(buildBlockCard(block, catalog, false));
   });
 
   container.querySelector('#confirm-btn').addEventListener('click', async () => {

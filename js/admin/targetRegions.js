@@ -62,22 +62,25 @@ export async function render(container, { onBack }) {
   // exerciseCatalog.js'teki AYNI düzeltme — bkz. oradaki yorum: "Ekle" artık
   // sadece isim BİREBİR (normalizeForMatch) eşleşiyorsa engelleniyor, salt
   // "benzer" (alt-dizge) eşleşme (ör. "Omuz" yazınca "Ön Omuz" varken) artık
-  // engellemiyor, sadece listede öne çıkarıyor.
+  // engellemiyor, sadece listede öne çıkarıyor. Karşılaştırma da (filtre DAHİL)
+  // toLocaleLowerCase('tr') DEĞİL normalizeForMatch() kullanıyor — Türkçe
+  // locale'de büyük "I" küçülünce noktasız "ı" oluyor, İngilizce kökenli
+  // isimlerde (bölge listesinde daha az ama olası) kullanıcının yazdığı küçük
+  // "i" ile eşleşmemesine yol açıyordu.
   function rowMatches(row, q) {
     const title = row.querySelector('.list-item-title');
-    return !q || (title && title.textContent.toLocaleLowerCase('tr').includes(q));
+    return !q || (title && normalizeForMatch(title.textContent).includes(q));
   }
 
   function applyFilter() {
-    const q = addInput.value.trim().toLocaleLowerCase('tr');
+    const q = normalizeForMatch(addInput.value);
     let visible = 0;
     listRoot.querySelectorAll('.list-item').forEach((row) => {
       const match = rowMatches(row, q);
       row.classList.toggle('hidden-by-filter', !match);
       if (match) visible++;
     });
-    const normalizedQuery = normalizeForMatch(addInput.value);
-    const exactMatch = !!normalizedQuery && items.some((it) => normalizeForMatch(it.name) === normalizedQuery);
+    const exactMatch = !!q && items.some((it) => normalizeForMatch(it.name) === q);
     if (!q) {
       searchHint.textContent = '';
       searchHint.classList.remove('active');

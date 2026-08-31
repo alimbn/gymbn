@@ -76,21 +76,26 @@ export async function render(container, {
   // hâlâ listede öne çıkarılıyor (yazım farkıyla yanlışlıkla ikinci bir kopya
   // açmayı önlemek için, kullanıcının kendi isteği) ama sadece GERÇEKTEN aynı
   // isim varsa "Ekle" engelleniyor.
+  // ÖNEMLİ: filtre ve eşleşme her ikisi de normalizeForMatch() kullanıyor,
+  // toLocaleLowerCase('tr') DEĞİL — Türkçe locale'de büyük "I" küçülünce
+  // noktasız "ı" oluyor ("İncline" değil "Incline" gibi İngilizce kökenli
+  // hareket isimlerinde bu, kullanıcının yazdığı küçük "i" ile hiç eşleşmiyordu).
+  // normalizeForMatch zaten uygulamanın her yerinde bu tür karşılaştırma için
+  // kullanılan TEK doğru kaynak, burası da ona uyuyor.
   function rowMatches(row, q) {
     const title = row.querySelector('.list-item-title');
-    return !q || (title && title.textContent.toLocaleLowerCase('tr').includes(q));
+    return !q || (title && normalizeForMatch(title.textContent).includes(q));
   }
 
   function applyFilter() {
-    const q = addInput.value.trim().toLocaleLowerCase('tr');
+    const q = normalizeForMatch(addInput.value);
     let visible = 0;
     listRoot.querySelectorAll('.list-item').forEach((row) => {
       const match = rowMatches(row, q);
       row.classList.toggle('hidden-by-filter', !match);
       if (match) visible++;
     });
-    const normalizedQuery = normalizeForMatch(addInput.value);
-    const exactMatch = !!normalizedQuery && items.some((it) => normalizeForMatch(it.name) === normalizedQuery);
+    const exactMatch = !!q && items.some((it) => normalizeForMatch(it.name) === q);
     if (!q) {
       searchHint.textContent = '';
       searchHint.classList.remove('active');
