@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gymbn-v95';
+const CACHE_NAME = 'gymbn-v96';
 
 const PRECACHE_URLS = [
   './',
@@ -82,6 +82,14 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return; // Firebase/Google trafiğine dokunma
   if (event.request.method !== 'GET') return;
+  // changelog-drafts.json sık sık (her yeni özellik/düzeltmede, service-worker
+  // sürümü hiç değişmeden) güncellenebiliyor — admin ekranı her açılışta
+  // GERÇEKTEN güncel listeyi görsün diye bu dosya cache-then-network'ün dışında,
+  // her zaman doğrudan ağdan.
+  if (url.pathname.endsWith('/changelog-drafts.json')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
   event.respondWith(
     caches.match(event.request).then((cached) => {
       const network = fetch(event.request).then((response) => {

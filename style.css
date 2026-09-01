@@ -582,6 +582,15 @@ input:focus, select:focus, textarea:focus {
   margin-top: 2px;
 }
 
+/* .list-item-title'ın tek-satır+ellipsis davranışını BİLEREK almıyor — gruplu
+   duyuru metinleri (Yeni:/Düzeltildi: gibi) çok satırlı, geçmişte tam
+   görünmesi gerekiyor. */
+.broadcast-history-text {
+  font-weight: 600;
+  white-space: pre-line;
+  line-height: 1.4;
+}
+
 .list-item-actions {
   display: flex;
   gap: var(--space-1);
@@ -2941,6 +2950,123 @@ body.chrome-hidden .rest-timer-btn {
   font-size: 12.5px;
   color: var(--text-muted);
   margin-bottom: var(--space-4);
+}
+
+/* "Sistem Mesajı Gönder"in taslak-değişiklik listesi — bkz. adminApp.js
+   openBroadcastSheet. Kategoriye göre gruplu, çoklu-seçim; seçilenler alttaki
+   metin kutusuna formatlanmış olarak ekleniyor. */
+.drafts-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.drafts-label h3 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  margin: 0;
+  font-weight: 700;
+}
+
+.drafts-count {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.cat-group {
+  margin-bottom: var(--space-3);
+}
+
+.cat-heading {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 6px;
+}
+
+.draft-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+  cursor: pointer;
+}
+
+.draft-item.checked {
+  border-color: var(--primary);
+  background: rgba(201, 161, 90, 0.1);
+}
+
+.draft-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid var(--border-strong);
+  flex-shrink: 0;
+  margin-top: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--bg);
+}
+
+.draft-item.checked .draft-check {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.draft-text {
+  flex: 1;
+  line-height: 1.4;
+}
+
+.draft-dismiss {
+  appearance: none;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 15px;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.draft-dismiss:hover {
+  color: var(--danger);
+}
+
+.add-selected-btn {
+  width: 100%;
+  padding: 10px;
+  margin: var(--space-2) 0 var(--space-4);
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--primary);
+  font-weight: 600;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.add-selected-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.sheet .divider {
+  height: 1px;
+  background: var(--border);
+  margin: var(--space-4) 0;
 }
 
 .confirm-sheet-message {

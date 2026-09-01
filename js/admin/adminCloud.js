@@ -80,6 +80,10 @@ export async function broadcastSystemMessage(message) {
   ]);
   const recipientUids = [...new Set([...coachSnap.docs.map((d) => d.id), ...studentSnap.docs.map((d) => d.id)])];
   const senderUid = auth.currentUser.uid;
+  // Her alıcıya AYRI bir doküman yazılıyor (bkz. üstteki not) ama hepsi aynı
+  // broadcastId'yi taşıyor — "Gönderilen Mesajlar" ekranı bunları TEK bir geçmiş
+  // kayıt olarak gruplayabilsin ve silme bu grubun TÜMÜNÜ birden kaldırabilsin diye.
+  const broadcastId = crypto.randomUUID();
   const results = await Promise.allSettled(recipientUids.map((recipientUid) => addDoc(collection(db, 'notifications'), {
     recipientUid,
     senderUid,
@@ -87,9 +91,32 @@ export async function broadcastSystemMessage(message) {
     message,
     read: false,
     createdAt: serverTimestamp(),
+    broadcastId,
   })));
   const failed = results.filter((r) => r.status === 'rejected').length;
   return { total: recipientUids.length, failed };
+}
+
+// "Gönderilen Mesajlar" geçmişi — aynı broadcastId'yi taşıyan (tek gönderim,
+// alıcı sayısı kadar doküman) kayıtları TEK satıra indiriyor. orderBy YOK
+// (recipientUid+createdAt için gerekip de unutulan composite index'in yol açtığı
+// v72'deki sessiz FAILED_PRECONDITION hatası tekrar yaşanmasın diye) — sıralama
+// istemci tarafında, zaten en fazla birkaç yüz kayıt olur.
+export async function listMyBroadcasts() {
+  const snap = await getDocs(query(collection(db, 'notifications'), where('type', '==', 'system_message')));
+  const groups = new Map();
+  snap.docs.forEach((d) => {
+    const data = d.data();
+    const key = data.broadcastId || d.id; // broadcastId'siz eski kayıtlar (bu alan eklenmeden ÖNCE gönderilenler) kendi başına bir grup kalsın
+    if (!groups.has(key)) groups.set(key, { broadcastId: key, message: data.message, createdAt: data.createdAt?.toMillis?.() ?? 0, count: 0 });
+    groups.get(key).count += 1;
+  });
+  return [...groups.values()].sort((a, b) => b.createdAt - a.createdAt);
+}
+
+export async function deleteBroadcast(broadcastId) {
+  const snap = await getDocs(query(collection(db, 'notifications'), where('broadcastId', '==', broadcastId)));
+  await Promise.allSettled(snap.docs.map((d) => deleteDoc(d.ref)));
 }
 
 // ---- exerciseCatalog: hocalar+öğrenciler arasında paylaşılan tek egzersiz listesi.

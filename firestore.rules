@@ -139,9 +139,17 @@ service cloud.firestore {
     // ---- notifications: uygulama içi bildirim. Alıcı SADECE kendi bildirimlerini
     // görebiliyor/okundu işaretleyebiliyor; oluşturma sadece gerçek bir hoca↔öğrenci
     // ilişkisi varsa mümkün (isCoachOfStudent / isMyCoach) — rastgele birine bildirim
-    // yazılamıyor. Update sadece `read` alanını değiştirebiliyor. Silme yok (v1). ----
+    // yazılamıyor. Update sadece `read` alanını değiştirebiliyor. ----
     match /notifications/{notifId} {
-      allow get, list: if isSignedIn() && resource.data.recipientUid == request.auth.uid;
+      // isAdmin() OR'u SADECE type=='system_message' için — admin'in kendi
+      // gönderdiği duyuruları geçmiş olarak görüp silebilmesi (bkz.
+      // adminCloud.js'teki listMyBroadcasts/deleteBroadcast), bir coach'un
+      // öğrencisine yazdığı ÖZEL bir bildirimi okuma/silme yetkisi DEĞİL —
+      // admin'in coach↔öğrenci ilişkisi hiç yok, o yüzden bilerek dar tutuldu.
+      allow get, list: if isSignedIn() && (
+        resource.data.recipientUid == request.auth.uid ||
+        (isAdmin() && resource.data.type == 'system_message')
+      );
       // isAdmin() OR'u SADECE admin'in "Sistem Mesajı Gönder" özelliği için —
       // admin'in coach↔öğrenci ilişkisi yok, bu yüzden hedef HERHANGİ bir uid
       // olabiliyor (tüm coaches+students'a tek tek yazıyor, bkz. adminCloud.js'in
@@ -153,7 +161,9 @@ service cloud.firestore {
       allow update: if isSignedIn()
         && resource.data.recipientUid == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
-      allow delete: if false;
+      // Aynı dar kapsam: admin SADECE kendi system_message duyurularını silebiliyor,
+      // bir coach/öğrenci arası bildirimi hiçbir zaman silemiyor.
+      allow delete: if isAdmin() && resource.data.type == 'system_message';
     }
   }
 }
