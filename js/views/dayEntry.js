@@ -6,9 +6,9 @@ import {
 import {
   dayOfWeekLabel, formatDateShortTr, escapeHtml, statusBadge, formatDuration, vibrate,
   ICON_TRASH, ICON_NOTE, ICON_COACH, isExerciseMediaEnabled, youTubeEmbedId,
-  TRACKED_FIELD_TYPES, DEFAULT_TRACKED_FIELDS,
+  TRACKED_FIELD_TYPES, DEFAULT_TRACKED_FIELDS, normalizeForMatch,
 } from '../util.js';
-import { notifyMyCoach } from '../cloudSync.js';
+import { notifyMyCoach, getAnyAccessibleCatalog } from '../cloudSync.js';
 import { renderSetRows } from '../components/setRows.js';
 import { openPicker } from '../components/picker.js';
 import { confirmSheet } from '../components/confirmSheet.js';
@@ -77,6 +77,14 @@ function renderEntry(container, entry) {
   const dayTypeSelect = container.querySelector('#day-type-select');
   const weekdayLabel = container.querySelector('#weekday-label');
   const cardsRoot = container.querySelector('#exercise-cards');
+
+  // "+ Egzersiz Ekle" kendi listenin YANI SIRA (coach-yönetimli öğrenci veya
+  // coach'un kendisiyse) paylaşılan kataloğu da arayabilsin diye baştan, sessizce
+  // çekiliyor — kullanıcının kendi sorusu: "eşleştirme mantığıyla çalışması
+  // gerekmiyor mu". Ekran açılışını beklemiyor (fire-and-forget); buton
+  // tıklandığında henüz gelmemişse sorun değil, sadece kendi listen gösterilir.
+  let catalogForAdd = null;
+  getAnyAccessibleCatalog().then((cat) => { catalogForAdd = cat; });
 
   function updateWeekdayLabel() {
     weekdayLabel.textContent = entry.date ? dayOfWeekLabel(entry.date) : '';
@@ -256,15 +264,32 @@ function renderEntry(container, entry) {
 
   container.querySelector('#add-exercise-btn').addEventListener('click', () => {
     const activeExercises = exercises.active();
-    if (!activeExercises.length) {
+    // Kataloğa henüz eklenmemiş (isme göre, normalizeForMatch) her katalog
+    // kaydı listeye "(kütüphane)" etiketiyle ekleniyor — seçilince
+    // exercises.resolveFromCatalog ile kendi listene kopyalanıyor (bulkAdd.js'in
+    // coach-yönetimli commit yolunun AYNI mantığı), sonra bugüne ekleniyor.
+    const catalogOnly = (catalogForAdd || []).filter(
+      (c) => !activeExercises.some((e) => normalizeForMatch(e.name) === normalizeForMatch(c.name)),
+    );
+    if (!activeExercises.length && !catalogOnly.length) {
       alert('Önce "Ayarlar > Egzersizler" ekranından en az bir egzersiz eklemelisin.');
       return;
     }
+    const items = [
+      ...activeExercises.map((e) => ({ id: e.id, name: e.name })),
+      ...catalogOnly.map((c) => ({ id: `cat:${c.id}`, name: `${c.name} (kütüphane)` })),
+    ];
     openPicker({
       title: 'Egzersiz Seç',
-      items: activeExercises,
+      items,
       emptyMessage: 'Eşleşen egzersiz yok.',
-      onSelect: (exerciseId) => {
+      onSelect: (pickedId) => {
+        let exerciseId = pickedId;
+        if (pickedId.startsWith('cat:')) {
+          const catalogEx = catalogForAdd.find((c) => c.id === pickedId.slice(4));
+          if (!catalogEx) return;
+          exerciseId = exercises.resolveFromCatalog(catalogEx).id;
+        }
         const newInst = addExerciseInstance(entry.id, exerciseId);
         expandedInstId = newInst.id;
         renderCards();

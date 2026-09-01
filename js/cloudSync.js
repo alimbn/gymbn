@@ -184,6 +184,18 @@ export async function getCoachOwnCatalogForLinking() {
   }
 }
 
+// dayEntry.js'nin "+ Egzersiz Ekle" gibi İSTEĞE BAĞLI kütüphane-arama
+// özellikleri için — hesap TÜRÜ ne olursa olsun (coach-yönetimli öğrenci VEYA
+// coach'un kendisi) erişebildiği bir katalog varsa onu döner. İkisinin kendi
+// ayrı, spesifik anlamını (zorunlu dropdown / opsiyonel eşleştirme) DEĞİŞTİRMİYOR
+// — sadece "bu hesap için bakılacak bir katalog var mı" diye TEK yerden
+// sorulabilsin diye. İkisi de yoksa (gerçek bireysel hesap) null.
+export async function getAnyAccessibleCatalog() {
+  const managed = await getMyCatalogIfManaged();
+  if (managed) return managed;
+  return getCoachOwnCatalogForLinking();
+}
+
 /* ---------- Uygulama içi bildirimler ---------- */
 
 export async function listMyNotifications() {
