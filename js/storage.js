@@ -1,4 +1,4 @@
-import { isoToDate, todayIso, pad2 } from './util.js';
+import { isoToDate, todayIso, pad2, DEFAULT_TRACKED_FIELDS } from './util.js';
 import { scheduleCloudPush } from './cloudSync.js';
 
 const STORAGE_KEY = 'gymbnData';
@@ -136,12 +136,15 @@ export const exercises = {
     item.isDuration = isDuration;
     saveState(false);
   },
-  setMedia: (id, { videoUrl, targetRegions }) => {
+  setMedia: (id, { videoUrl, targetRegions, trackedFields }) => {
     const item = libraryItemById('exercises', id);
     if (!item) return;
     item.videoUrl = videoUrl || '';
     item.targetRegions = targetRegions || [];
     delete item.targetRegion;
+    // Boş dizi kaydetmiyoruz — hiçbir alan seçilmemiş bir egzersiz UI'da hiçbir
+    // şey gösteremez hale gelir, bunun yerine varsayılana düşüyoruz.
+    if (trackedFields) item.trackedFields = trackedFields.length ? trackedFields : DEFAULT_TRACKED_FIELDS;
     saveState(false);
   },
   active: () => activeLibraryItems('exercises'),

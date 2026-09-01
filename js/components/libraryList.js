@@ -1,4 +1,4 @@
-import { escapeHtml, ICON_TRASH, ICON_MEDIA, EXERCISE_REGIONS } from '../util.js';
+import { escapeHtml, ICON_TRASH, ICON_MEDIA, EXERCISE_REGIONS, TRACKED_FIELD_TYPES, DEFAULT_TRACKED_FIELDS } from '../util.js';
 import { confirmSheet } from './confirmSheet.js';
 
 export function renderLibraryList(container, { title, store, placeholder, backHref, showDurationToggle, showMediaEditor }) {
@@ -98,22 +98,31 @@ export function renderLibraryList(container, { title, store, placeholder, backHr
   function openMediaSheet(item) {
     const selectedNames = new Set((item.targetRegions || []).map((r) => r.name));
     if (item.targetRegion) selectedNames.add(item.targetRegion); // eski tekil alan, göç
+    const selectedFields = new Set(item.trackedFields || DEFAULT_TRACKED_FIELDS);
 
     const backdrop = document.createElement('div');
     backdrop.className = 'sheet-backdrop';
     backdrop.innerHTML = `
       <div class="sheet">
         <div class="sheet-title">${escapeHtml(item.name)}</div>
-        <div class="sheet-sub">Video linki ve hedef bölge(ler) ekle</div>
+        <div class="sheet-sub">Video linki, hedef bölge(ler) ve takip edilecek alanlar</div>
         <div class="field">
           <label>Video linki</label>
           <input type="text" id="media-url" placeholder="https://..." value="${escapeHtml(item.videoUrl || '')}">
         </div>
-        <div class="field" style="margin-bottom:0;">
+        <div class="field">
           <label>Hedef bölge (birden fazla seçebilirsin)</label>
           <div class="region-grid" id="media-region-grid">
             ${[...EXERCISE_REGIONS].sort((a, b) => a.name.localeCompare(b.name, 'tr')).map((r) => (
               `<button type="button" class="region-chip${selectedNames.has(r.name) ? ' selected' : ''}" data-name="${escapeHtml(r.name)}" data-color="${r.color}">${escapeHtml(r.name)}</button>`
+            )).join('')}
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Takip edilecek alanlar (istediğin kadar seç)</label>
+          <div class="region-grid" id="media-field-grid">
+            ${TRACKED_FIELD_TYPES.map((f) => (
+              `<button type="button" class="region-chip${selectedFields.has(f.key) ? ' selected' : ''}" data-key="${f.key}">${escapeHtml(f.label)}${f.unit ? ` (${f.unit})` : ''}</button>`
             )).join('')}
           </div>
         </div>
@@ -133,11 +142,12 @@ export function renderLibraryList(container, { title, store, placeholder, backHr
 
     backdrop.querySelector('#media-save').addEventListener('click', () => {
       const videoUrl = backdrop.querySelector('#media-url').value.trim();
-      const targetRegions = [...backdrop.querySelectorAll('.region-chip.selected')].map((chip) => ({
+      const targetRegions = [...backdrop.querySelectorAll('#media-region-grid .region-chip.selected')].map((chip) => ({
         name: chip.dataset.name,
         color: chip.dataset.color,
       }));
-      store.setMedia(item.id, { videoUrl, targetRegions });
+      const trackedFields = [...backdrop.querySelectorAll('#media-field-grid .region-chip.selected')].map((chip) => chip.dataset.key);
+      store.setMedia(item.id, { videoUrl, targetRegions, trackedFields });
       close();
       renderItems();
     });

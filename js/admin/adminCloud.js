@@ -1,4 +1,5 @@
 import { auth, db } from '../shared/firebaseClient.js';
+import { DEFAULT_TRACKED_FIELDS } from '../util.js';
 import {
   onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail,
 } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
@@ -108,6 +109,7 @@ export async function addCatalogExercise(name, isDuration = false) {
     targetRegions: [],
     isDuration: !!isDuration,
     archived: false,
+    trackedFields: DEFAULT_TRACKED_FIELDS,
     createdAt: serverTimestamp(),
   });
   return id;
@@ -124,8 +126,12 @@ export async function setCatalogDuration(id, isDuration) {
 // targetRegions: [{name, color}] — regions koleksiyonundan seçilenlerin O ANKİ
 // isim/renginin kopyası (bkz. dosya sonu). dayEntry.js hiçbir zaman regions
 // koleksiyonuna bakmıyor, sadece bu kopyayı okuyor.
-export async function setCatalogMedia(id, { videoUrl, targetRegions }) {
-  await setDoc(doc(db, 'exerciseCatalog', id), { videoUrl: videoUrl || '', targetRegions: targetRegions || [] }, { merge: true });
+export async function setCatalogMedia(id, { videoUrl, targetRegions, trackedFields }) {
+  await setDoc(doc(db, 'exerciseCatalog', id), {
+    videoUrl: videoUrl || '',
+    targetRegions: targetRegions || [],
+    trackedFields: trackedFields?.length ? trackedFields : DEFAULT_TRACKED_FIELDS,
+  }, { merge: true });
 }
 
 export async function archiveCatalogExercise(id) {

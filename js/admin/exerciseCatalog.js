@@ -1,4 +1,4 @@
-import { escapeHtml, ICON_TRASH, ICON_MEDIA, normalizeForMatch } from '../util.js';
+import { escapeHtml, ICON_TRASH, ICON_MEDIA, normalizeForMatch, TRACKED_FIELD_TYPES, DEFAULT_TRACKED_FIELDS } from '../util.js';
 import { confirmSheet } from '../components/confirmSheet.js';
 
 // libraryList.js'in aynı görsel/etkileşim dili — sadece veri kaynağı yerel
@@ -155,7 +155,7 @@ export async function render(container, {
     addInput.focus();
     try {
       const id = await addCatalogExercise(name);
-      items.push({ id, name, videoUrl: '', targetRegions: [], isDuration: false, archived: false });
+      items.push({ id, name, videoUrl: '', targetRegions: [], isDuration: false, archived: false, trackedFields: DEFAULT_TRACKED_FIELDS });
       renderItems();
     } catch (err) {
       console.error('Egzersiz eklenemedi', err);
@@ -222,23 +222,32 @@ export async function render(container, {
     const selectedNames = new Set((item.targetRegions || []).map((r) => r.name));
     if (item.targetRegion) selectedNames.add(item.targetRegion);
     const selectedIds = new Set(regions.filter((r) => selectedNames.has(r.name)).map((r) => r.id));
+    const selectedFields = new Set(item.trackedFields || DEFAULT_TRACKED_FIELDS);
 
     const backdrop = document.createElement('div');
     backdrop.className = 'sheet-backdrop';
     backdrop.innerHTML = `
       <div class="sheet">
         <div class="sheet-title">${escapeHtml(item.name)}</div>
-        <div class="sheet-sub">Video linki ve hedef bölge(ler) ekle</div>
+        <div class="sheet-sub">Video linki, hedef bölge(ler) ve takip edilecek alanlar</div>
         <div class="field">
           <label>Video linki</label>
           <input type="text" id="media-url" placeholder="https://..." value="${escapeHtml(item.videoUrl || '')}">
         </div>
-        <div class="field" style="margin-bottom:0;">
+        <div class="field">
           <label>Hedef bölge (birden fazla seçebilirsin)</label>
           <div class="region-grid" id="media-region-grid">
             ${regions.length ? regions.map((r) => (
               `<button type="button" class="region-chip${selectedIds.has(r.id) ? ' selected' : ''}" data-id="${r.id}">${escapeHtml(r.name)}</button>`
             )).join('') : '<p class="empty-state">Henüz bölge eklenmedi, önce Hedef Bölgeler ekranından ekle.</p>'}
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Takip edilecek alanlar (istediğin kadar seç)</label>
+          <div class="region-grid" id="media-field-grid">
+            ${TRACKED_FIELD_TYPES.map((f) => (
+              `<button type="button" class="region-chip${selectedFields.has(f.key) ? ' selected' : ''}" data-key="${f.key}">${escapeHtml(f.label)}${f.unit ? ` (${f.unit})` : ''}</button>`
+            )).join('')}
           </div>
         </div>
         <button type="button" class="btn btn-primary btn-block" id="media-save">Kaydet</button>
@@ -257,17 +266,19 @@ export async function render(container, {
 
     backdrop.querySelector('#media-save').addEventListener('click', async () => {
       const videoUrl = backdrop.querySelector('#media-url').value.trim();
-      const targetRegions = [...backdrop.querySelectorAll('.region-chip.selected')].map((chip) => {
+      const targetRegions = [...backdrop.querySelectorAll('#media-region-grid .region-chip.selected')].map((chip) => {
         const region = regions.find((r) => r.id === chip.dataset.id);
         return { name: region.name, color: region.color };
       });
+      const trackedFields = [...backdrop.querySelectorAll('#media-field-grid .region-chip.selected')].map((chip) => chip.dataset.key);
       const saveBtn = backdrop.querySelector('#media-save');
       saveBtn.disabled = true;
       saveBtn.textContent = 'Kaydediliyor…';
       try {
-        await setCatalogMedia(item.id, { videoUrl, targetRegions });
+        await setCatalogMedia(item.id, { videoUrl, targetRegions, trackedFields });
         item.videoUrl = videoUrl;
         item.targetRegions = targetRegions;
+        item.trackedFields = trackedFields.length ? trackedFields : DEFAULT_TRACKED_FIELDS;
         close();
         renderItems();
       } catch (err) {

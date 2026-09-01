@@ -125,6 +125,29 @@ export const EXERCISE_REGIONS = [
   { name: 'Tüm Vücut', color: '#8b8f98' },
 ];
 
+// Her egzersiz bu paletten hangi alanları takip edeceğini seçiyor (çoklu-seçim,
+// EXERCISE_REGIONS'daki AYNI desen) — "kuvvet hareketi" mi "kardiyo" mu diye
+// sabit bir TİP seçmek yerine, hangi alanların anlamlı olduğunu doğrudan
+// işaretliyorsun. Yeni bir ihtiyaç (ör. nabız) çıkarsa buraya bir satır eklemek
+// yeterli, var olan hiçbir egzersizi bozmuyor. Sırası prescribed-fields'ta ve
+// set girişinde gösterilecekleri sırayı da belirliyor.
+export const TRACKED_FIELD_TYPES = [
+  { key: 'weight', label: 'Ağırlık', unit: 'kg' },
+  { key: 'setCount', label: 'Set', unit: '' },
+  { key: 'reps', label: 'Tekrar', unit: '' },
+  { key: 'rir', label: 'Rir', unit: '' },
+  { key: 'duration', label: 'Süre', unit: 'dk' },
+  { key: 'incline', label: 'Eğim', unit: '%' },
+  { key: 'speed', label: 'Hız', unit: 'km/h' },
+  { key: 'distance', label: 'Mesafe', unit: 'km' },
+  { key: 'resistance', label: 'Direnç', unit: 'seviye' },
+];
+
+// Bu özellikten ÖNCE oluşturulmuş her egzersiz (yani ezici çoğunluk) hiç
+// trackedFields kaydetmedi — okurken eksikse buna düşülüyor, tek bir kayıt bile
+// göç etmeye gerek yok. Yeni eklenen bir egzersiz de aynı varsayılanla başlıyor.
+export const DEFAULT_TRACKED_FIELDS = ['weight', 'setCount', 'reps', 'rir'];
+
 const YOUTUBE_ID_RE = /(?:youtube\.com\/watch\?v=|youtube\.com\/embed\/|youtube\.com\/shorts\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
 
 export function youTubeEmbedId(url) {
