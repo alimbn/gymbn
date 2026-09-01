@@ -842,12 +842,28 @@ function buildExerciseRow(ex, block, exList, catalog) {
 // Öğrencinin kendi uygulaması (dayEntry.js) hâlâ sadece kendi yerel listesine bakıyor,
 // hiç değişmedi — admin kataloğu sonradan güncellerse, hocanın bir sonraki atamasında
 // (aynı sourceCatalogId üzerinden) taze veri tekrar kopyalanıyor.
+// Bir katalog hareketi bu öğrenciye İLK KEZ atanıyorsa (sourceCatalogId'si
+// olan bir kayıt hiç yoksa), körü körüne yeni bir kayıt açmadan ÖNCE aynı
+// isimde (normalizeForMatch) ama hiç kataloğa bağlanmamış bir yerel kaydı
+// (ör. öğrencinin daha önce kendi eklediği "bench press") arayıp ONU
+// kataloğa bağlıyoruz — buildBlocksFromExistingWeek'in (v83) okuma tarafında
+// zaten yaptığı isim-yedekleme mantığının AYNISI, burada yazma/atama tarafına
+// da uygulanıyor. Bunsuz, öğrencinin coach'a bağlanmadan ÖNCEki tüm geçmişi
+// (aynı hareket, aynı isim) "İlk kez yapılıyor" görünüyordu — bkz. bu
+// düzeltmenin geldiği sohbet. Zaten kataloğa bağlı (başka bir sourceCatalogId
+// taşıyan) bir kayıt asla bu şekilde "ele geçirilmiyor", sadece HİÇ
+// bağlanmamış kayıtlar aday sayılıyor.
 function resolveLocalExercise(state, catalogEx) {
   let exercise = state.exercises.find((e) => e.sourceCatalogId === catalogEx.id);
+  if (!exercise) {
+    const normalizedName = normalizeForMatch(catalogEx.name);
+    exercise = state.exercises.find((e) => !e.sourceCatalogId && normalizeForMatch(e.name) === normalizedName) || null;
+  }
   if (!exercise) {
     exercise = { id: uid('ex'), archived: false, sourceCatalogId: catalogEx.id };
     state.exercises.push(exercise);
   }
+  exercise.sourceCatalogId = catalogEx.id;
   exercise.name = catalogEx.name;
   exercise.isDuration = !!catalogEx.isDuration;
   exercise.videoUrl = catalogEx.videoUrl || '';

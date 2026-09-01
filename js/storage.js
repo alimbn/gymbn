@@ -1,4 +1,4 @@
-import { isoToDate, todayIso, pad2, DEFAULT_TRACKED_FIELDS } from './util.js';
+import { isoToDate, todayIso, pad2, DEFAULT_TRACKED_FIELDS, normalizeForMatch } from './util.js';
 import { scheduleCloudPush } from './cloudSync.js';
 
 const STORAGE_KEY = 'gymbnData';
@@ -156,12 +156,22 @@ export const exercises = {
   // açmak yerine var olanı tazeler — admin sonradan video/bölge güncellerse bir
   // sonraki yapıştırmada otomatik yansır. bulkAdd.js'in coach-yönetimli hesap
   // yolundan çağrılıyor, bireysel kullanımda hiç devreye girmiyor.
+  // İLK atamada (sourceCatalogId'li kayıt yok) körü körüne yeni açmadan önce
+  // isme göre (normalizeForMatch) hiç bağlanmamış bir yerel kaydı arıyor —
+  // assignProgram.js'teki AYNI düzeltme, bkz. oradaki yorum ve bu değişikliğin
+  // geldiği sohbet. Zaten başka bir katalog kaydına bağlı bir egzersiz asla
+  // isimle "ele geçirilmiyor".
   resolveFromCatalog: (catalogEx) => {
     let item = state.exercises.find((e) => e.sourceCatalogId === catalogEx.id);
+    if (!item) {
+      const normalizedName = normalizeForMatch(catalogEx.name);
+      item = state.exercises.find((e) => !e.sourceCatalogId && normalizeForMatch(e.name) === normalizedName) || null;
+    }
     if (!item) {
       item = { id: uid('ex'), archived: false, sourceCatalogId: catalogEx.id };
       state.exercises.push(item);
     }
+    item.sourceCatalogId = catalogEx.id;
     item.name = catalogEx.name;
     item.isDuration = !!catalogEx.isDuration;
     item.videoUrl = catalogEx.videoUrl || '';
