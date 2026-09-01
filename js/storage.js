@@ -263,23 +263,47 @@ function clampRir(n) {
   return Math.max(0, Math.min(9, n));
 }
 
+function trackedFieldsOf(exercise) {
+  return (exercise && exercise.trackedFields) || DEFAULT_TRACKED_FIELDS;
+}
+
 // Süre-bazlı egzersizlerde rir alanı "rezerv saniye" anlamına geldiği için
 // (bkz. exercises.isDuration) 0-9'a sıkıştırılmıyor, sadece negatif olamıyor.
-function buildActualSetsFromPrescribed(prescribed, isDuration) {
-  const count = Math.max(1, Number(prescribed.setCount) || 1);
-  const reps = String(extractLeadingInt(prescribed.reps, 0));
-  const rirValue = extractLeadingInt(prescribed.rir, 0);
-  const rir = String(isDuration ? Math.max(0, rirValue) : clampRir(rirValue));
+// setCount kendi satırı DEĞİL — sadece kaç satır (buildActualSetsFromPrescribed)
+// olacağını belirliyor. Diğer yeni alanlar (süre/eğim/hız/mesafe/direnç)
+// serbest metin, prescribed'daki değeri olduğu gibi kopyalıyor.
+function buildOneActualSet(prescribed, trackedFields, isDuration) {
+  const row = { touched: false };
+  trackedFields.forEach((key) => {
+    if (key === 'setCount') return;
+    if (key === 'reps') {
+      row.reps = String(extractLeadingInt(prescribed.reps, 0));
+    } else if (key === 'rir') {
+      const rirValue = extractLeadingInt(prescribed.rir, 0);
+      row.rir = String(isDuration ? Math.max(0, rirValue) : clampRir(rirValue));
+    } else {
+      row[key] = prescribed[key] ?? '';
+    }
+  });
+  return row;
+}
+
+// "Set" trackedFields'ta yoksa (ör. Yürüyüş) tek satır yeterli — akordiyon
+// çoğaltma/silme kavramı hiç yok, bkz. setRows.js. Varsa mevcut davranış aynen
+// korunuyor (prescribed.setCount kadar satır).
+function buildActualSetsFromPrescribed(prescribed, exercise) {
+  const isDuration = !!(exercise && exercise.isDuration);
+  const trackedFields = trackedFieldsOf(exercise);
+  const count = trackedFields.includes('setCount') ? Math.max(1, Number(prescribed.setCount) || 1) : 1;
   const rows = [];
   for (let i = 0; i < count; i++) {
-    rows.push({ weight: prescribed.weight, reps, rir, touched: false });
+    rows.push(buildOneActualSet(prescribed, trackedFields, isDuration));
   }
   return rows;
 }
 
 function buildInstance(exerciseId, prescribed) {
   const exercise = libraryItemById('exercises', exerciseId);
-  const isDuration = !!(exercise && exercise.isDuration);
   return {
     id: uid('exi'),
     exerciseId,
@@ -287,21 +311,32 @@ function buildInstance(exerciseId, prescribed) {
     status: null,
     loggedAt: null,
     prescribed,
-    actualSets: buildActualSetsFromPrescribed(prescribed, isDuration),
+    actualSets: buildActualSetsFromPrescribed(prescribed, exercise),
   };
 }
 
+// Geçmişte bu egzersizin kaydı varsa AYNEN o reçete kopyalanıyor (mevcut
+// davranış) — yoksa egzersizin KENDİ trackedFields'ına göre boş bir reçete
+// kuruluyor (setCount:3, rir:'0' varsayılanları eski sabit objeyle birebir
+// aynı, diğer her alan boş metin).
 export function addExerciseInstance(dayId, exerciseId) {
   const entry = getDayEntryById(dayId);
   if (!entry) return null;
   const last = getLastInstance(exerciseId, dayId);
-  const prescribed = last
-    ? { ...last.prescribed }
-    : { weight: '', setCount: 3, reps: '', rir: '0' };
+  const exercise = libraryItemById('exercises', exerciseId);
+  const prescribed = last ? { ...last.prescribed } : buildDefaultPrescribed(trackedFieldsOf(exercise));
   const inst = buildInstance(exerciseId, prescribed);
   entry.exercises.push(inst);
   saveState(false);
   return inst;
+}
+
+function buildDefaultPrescribed(trackedFields) {
+  const p = {};
+  trackedFields.forEach((key) => {
+    p[key] = key === 'setCount' ? 3 : key === 'rir' ? '0' : '';
+  });
+  return p;
 }
 
 export function addExerciseInstanceWithPrescribed(dayId, exerciseId, prescribed) {
@@ -326,7 +361,7 @@ export function updateInstancePrescribed(dayId, instId, field, value, debounce =
   inst.prescribed[field] = value;
   if (inst.actualSets.every((s) => !s.touched)) {
     const exercise = libraryItemById('exercises', inst.exerciseId);
-    inst.actualSets = buildActualSetsFromPrescribed(inst.prescribed, !!(exercise && exercise.isDuration));
+    inst.actualSets = buildActualSetsFromPrescribed(inst.prescribed, exercise);
   }
   saveState(debounce);
 }
@@ -350,17 +385,15 @@ export function addActualSet(dayId, instId) {
   if (!inst) return;
   const exercise = libraryItemById('exercises', inst.exerciseId);
   const isDuration = !!(exercise && exercise.isDuration);
+  const trackedFields = trackedFieldsOf(exercise);
   const last = inst.actualSets[inst.actualSets.length - 1];
-  inst.actualSets.push(last
-    ? { weight: last.weight, reps: last.reps, rir: last.rir, touched: false }
-    : {
-      weight: inst.prescribed.weight,
-      reps: String(extractLeadingInt(inst.prescribed.reps, 0)),
-      rir: String(isDuration
-        ? Math.max(0, extractLeadingInt(inst.prescribed.rir, 0))
-        : clampRir(extractLeadingInt(inst.prescribed.rir, 0))),
-      touched: false,
-    });
+  if (last) {
+    const row = { touched: false };
+    trackedFields.forEach((key) => { if (key !== 'setCount') row[key] = last[key]; });
+    inst.actualSets.push(row);
+  } else {
+    inst.actualSets.push(buildOneActualSet(inst.prescribed, trackedFields, isDuration));
+  }
   saveState(false);
 }
 

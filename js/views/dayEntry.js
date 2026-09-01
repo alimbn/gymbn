@@ -6,6 +6,7 @@ import {
 import {
   dayOfWeekLabel, formatDateShortTr, escapeHtml, statusBadge, formatDuration, vibrate,
   ICON_TRASH, ICON_NOTE, ICON_COACH, isExerciseMediaEnabled, youTubeEmbedId,
+  TRACKED_FIELD_TYPES, DEFAULT_TRACKED_FIELDS,
 } from '../util.js';
 import { notifyMyCoach } from '../cloudSync.js';
 import { renderSetRows } from '../components/setRows.js';
@@ -316,8 +317,25 @@ function buildExpandedBody(bodyEl, entry, inst, onStatusSet) {
   const isDuration = !!(exercise && exercise.isDuration);
   const repsLabel = isDuration ? 'Süre (sn)' : 'Tekrar';
   const rirLabel = isDuration ? 'Rezerv (sn)' : 'Rir';
+  const trackedFields = (exercise && exercise.trackedFields) || DEFAULT_TRACKED_FIELDS;
   const showMedia = isExerciseMediaEnabled() && exercise && (exercise.targetRegions?.length || exercise.videoUrl);
   const ytId = exercise && exercise.videoUrl ? youTubeEmbedId(exercise.videoUrl) : null;
+
+  // Hoca reçetesi artık sabit 4 alan değil, egzersizin trackedFields'ına göre
+  // dinamik — bkz. util.js TRACKED_FIELD_TYPES. reps/rir'ın isDuration'a göre
+  // değişen etiketi (Süre/Rezerv sn) aynen korunuyor; diğer yeni alanlar
+  // (süre/eğim/hız/mesafe/direnç) sade adlarıyla gösteriliyor — Ağırlık'ta
+  // olduğu gibi birim serbest metnin içine yazılıyor ("30dk" gibi), ayrı bir
+  // birim etiketi eklemiyoruz ki hoca aralık da yazabilsin ("20-30dk").
+  const prescFieldsHtml = trackedFields.map((key) => {
+    if (key === 'setCount') {
+      return `<div class="field"><label>Set</label><input type="number" class="presc-input" data-field="setCount" min="1" inputmode="numeric" value="${inst.prescribed.setCount ?? ''}"></div>`;
+    }
+    let label = TRACKED_FIELD_TYPES.find((f) => f.key === key)?.label || key;
+    if (key === 'reps') label = repsLabel;
+    else if (key === 'rir') label = rirLabel;
+    return `<div class="field"><label>${escapeHtml(label)}</label><input type="text" class="presc-input" data-field="${key}" value="${escapeHtml(inst.prescribed[key] ?? '')}"></div>`;
+  }).join('');
 
   bodyEl.innerHTML = `
     ${showMedia ? `
@@ -346,10 +364,7 @@ function buildExpandedBody(bodyEl, entry, inst, onStatusSet) {
     <div class="prescribed-block">
       <div class="block-label">${ICON_COACH}Hoca</div>
       <div class="prescribed-fields">
-        <div class="field"><label>Ağırlık</label><input type="text" class="presc-input" data-field="weight" value="${escapeHtml(inst.prescribed.weight)}"></div>
-        <div class="field"><label>Set</label><input type="number" class="presc-input" data-field="setCount" min="1" inputmode="numeric" value="${inst.prescribed.setCount ?? ''}"></div>
-        <div class="field"><label>${repsLabel}</label><input type="text" class="presc-input" data-field="reps" value="${escapeHtml(inst.prescribed.reps)}"></div>
-        <div class="field"><label>${rirLabel}</label><input type="text" class="presc-input" data-field="rir" value="${escapeHtml(inst.prescribed.rir)}"></div>
+        ${prescFieldsHtml}
       </div>
       <div class="field prescribed-note-field">
         <label>Hoca Notu</label>
@@ -431,7 +446,7 @@ function buildExpandedBody(bodyEl, entry, inst, onStatusSet) {
   const setRowsMount = bodyEl.querySelector('.set-rows-mount');
   function mountSetRows() {
     renderSetRows(setRowsMount, {
-      dayId: entry.id, instId: inst.id, inst, isDuration,
+      dayId: entry.id, instId: inst.id, inst, isDuration, trackedFields,
       exerciseName: exercise ? exercise.name : '',
     });
   }

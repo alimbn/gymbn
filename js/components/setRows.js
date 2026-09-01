@@ -1,11 +1,22 @@
 import { addActualSet, removeActualSet, updateActualSetField } from '../storage.js';
-import { escapeHtml } from '../util.js';
+import { escapeHtml, TRACKED_FIELD_TYPES, DEFAULT_TRACKED_FIELDS } from '../util.js';
 import { openCountdown } from './countdownTimer.js';
 
 const WEIGHT_STEP = 2.5;
 const DURATION_STEP = 5;
 const NUMBER_FIELD_MAX = { reps: 30, rir: 9 };
 const NUMBER_FIELD_LABEL = { reps: 'Tekrar', rir: 'Rir' };
+
+// weight/reps/rir'ın KENDİ özel muamelesi var (aşağıda) — bunun dışında kalan,
+// egzersizin trackedFields'ında olabilecek her yeni alan (süre/eğim/hız/
+// mesafe/direnç) için adım büyüklüğü + birim burada, TEK yerde tanımlı.
+const EXTRA_FIELD_STEP = { duration: 5, incline: 1, speed: 0.5, distance: 0.5, resistance: 1 };
+function extraFieldLabel(key) {
+  return TRACKED_FIELD_TYPES.find((f) => f.key === key)?.label || key;
+}
+function extraFieldUnit(key) {
+  return TRACKED_FIELD_TYPES.find((f) => f.key === key)?.unit || '';
+}
 
 // Hocanın prescribed metninden 1-2 hedef sayı çıkarır — "3-4" gibi bir aralıksa
 // İKİSİNİ de döner (extractLeadingInt sadece ilkini alırdı, "4" sessizce kaybolurdu).
@@ -23,7 +34,14 @@ function extractIntRange(str) {
 // (herhangi bir alanına) o seti aktif işaretliyor; RIR alanına dokunmak AYRICA
 // bir sonraki bitmemiş sete ilerletiyor (rir genelde bir setin en son kontrol
 // edilen değeri, doğal bir "artık ilerle" sinyali).
-export function renderSetRows(container, { dayId, instId, inst, isDuration, exerciseName }) {
+export function renderSetRows(container, { dayId, instId, inst, isDuration, exerciseName, trackedFields }) {
+  const fields = trackedFields || DEFAULT_TRACKED_FIELDS;
+  // "Set" paletten çıkarılmışsa (ör. Yürüyüş) çoğaltma/silme kavramı hiç yok —
+  // tek satır, sabit — bkz. bu değişikliğin geldiği sohbet: kullanıcının kendi
+  // isteği "Set konusunu zaten hoca [her egzersiz için] belirliyor" oldu, yani
+  // Set paletTEki DİĞER alanlarla eşit bir seçenek, ayrı bir anahtar değil.
+  const hasSetCount = fields.includes('setCount');
+  const extraFields = fields.filter((k) => !['setCount', 'weight', 'reps', 'rir'].includes(k));
   let activeIndex = firstIncompleteIndex();
   renderAll();
 
@@ -37,16 +55,19 @@ export function renderSetRows(container, { dayId, instId, inst, isDuration, exer
       <div class="set-rows">
         <div class="block-label">Yapılan (Actual)</div>
         <div class="set-rows-list"></div>
-        <button type="button" class="add-set-btn">+ Set Ekle</button>
+        ${hasSetCount ? '<button type="button" class="add-set-btn">+ Set Ekle</button>' : ''}
       </div>
     `;
     const list = container.querySelector('.set-rows-list');
     inst.actualSets.forEach((set, idx) => list.appendChild(buildRow(set, idx)));
-    container.querySelector('.add-set-btn').addEventListener('click', () => {
-      addActualSet(dayId, instId);
-      activeIndex = inst.actualSets.length - 1;
-      renderAll();
-    });
+    const addBtn = container.querySelector('.add-set-btn');
+    if (addBtn) {
+      addBtn.addEventListener('click', () => {
+        addActualSet(dayId, instId);
+        activeIndex = inst.actualSets.length - 1;
+        renderAll();
+      });
+    }
   }
 
   // Tam yeniden render etmeden sadece "active" sınıfını taşımak — bir input'a
@@ -64,20 +85,33 @@ export function renderSetRows(container, { dayId, instId, inst, isDuration, exer
     row.className = 'set-row' + (set.touched ? '' : ' suggested') + (idx === activeIndex ? ' active' : '');
     row.dataset.setIndex = String(idx);
 
-    const bottomFields = isDuration
-      ? buildLabeledStepper('reps', set.reps, { step: DURATION_STEP, unit: 'sn', label: 'Süre', withTimer: true })
-        + buildLabeledStepper('rir', set.rir, { step: DURATION_STEP, unit: 'sn', label: 'Rezerv' })
+    const hasReps = fields.includes('reps');
+    const hasRir = fields.includes('rir');
+    const bottomFields = !hasReps && !hasRir ? '' : isDuration
+      ? (hasReps ? buildLabeledStepper('reps', set.reps, { step: DURATION_STEP, unit: 'sn', label: 'Süre', withTimer: true }) : '')
+        + (hasRir ? buildLabeledStepper('rir', set.rir, { step: DURATION_STEP, unit: 'sn', label: 'Rezerv' }) : '')
       : `<div class="set-row-bottom">
-          ${buildNumberField('reps', set.reps)}
-          ${buildNumberField('rir', set.rir)}
+          ${hasReps ? buildNumberField('reps', set.reps) : ''}
+          ${hasRir ? buildNumberField('rir', set.rir) : ''}
         </div>`;
+    // weight kendi tek başına üst satırında (mevcut/klasik davranış, hiç
+    // değişmedi); yeni alanlar (süre/eğim/hız/mesafe/direnç) — hepsi serbest
+    // sayısal steppers — ayrı bir ızgarada, aralarında Set yoksa TEK satırlık
+    // görünüm için de aynı ızgara yeterli (bkz. bu değişikliğin demosu).
+    const extraHtml = extraFields.length ? `
+      <div class="dyn-stepper-grid">
+        ${extraFields.map((key) => buildLabeledStepper(key, set[key], { step: EXTRA_FIELD_STEP[key] ?? 1, unit: extraFieldUnit(key), label: extraFieldLabel(key) })).join('')}
+      </div>
+    ` : '';
     row.innerHTML = `
+      ${hasSetCount ? `
       <div class="set-row-head">
         <span class="set-row-label">Set ${idx + 1}</span>
         <button type="button" class="btn-icon danger set-row-remove" aria-label="Seti sil">×</button>
-      </div>
-      ${buildWeightStepper(set.weight)}
+      </div>` : ''}
+      ${fields.includes('weight') ? buildWeightStepper(set.weight) : ''}
       ${bottomFields}
+      ${extraHtml}
     `;
     row.addEventListener('click', () => activate(idx));
     wireRow(row);
@@ -175,11 +209,14 @@ export function renderSetRows(container, { dayId, instId, inst, isDuration, exer
   function wireRow(row) {
     const setIndex = Number(row.dataset.setIndex);
 
-    row.querySelector('.set-row-remove').addEventListener('click', () => {
-      removeActualSet(dayId, instId, setIndex);
-      activeIndex = firstIncompleteIndex();
-      renderAll();
-    });
+    const removeBtn = row.querySelector('.set-row-remove');
+    if (removeBtn) {
+      removeBtn.addEventListener('click', () => {
+        removeActualSet(dayId, instId, setIndex);
+        activeIndex = firstIncompleteIndex();
+        renderAll();
+      });
+    }
 
     // Ağırlık her zaman, süre/rezerv sadece isDuration'da bir stepper — hepsi aynı
     // jenerik döngüyle kabloanıyor, adım büyüklüğü data-step'ten okunuyor.

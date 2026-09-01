@@ -1439,6 +1439,20 @@ a.list-item {
   margin-bottom: 4px;
 }
 
+/* Süre/eğim/hız/mesafe/direnç gibi egzersize göre değişen alanlar — bkz. bu
+   özelliğin geldiği sohbet. auto-fit ile 2-3 alan da aynı satıra sığdığı
+   kadar sığıyor, kalanı doğal olarak alt satıra kayıyor. */
+.dyn-stepper-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.dyn-stepper-grid .stepper-group {
+  margin-top: 0;
+}
+
 .set-row-remove {
   flex-shrink: 0;
 }
@@ -2074,7 +2088,7 @@ a.list-item {
 }
 
 .bulk-exercise-row {
-  border-top: 1px solid var(--border);
+  border-top: 1px solid rgba(201, 161, 90, 0.4);
   padding-top: var(--space-3);
 }
 
