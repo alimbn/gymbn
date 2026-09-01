@@ -1,4 +1,4 @@
-import { normalizeForMatch, addDaysIso, mondayOfWeek, todayIso, escapeHtml, formatDateShortTr, statusBadge } from '../util.js';
+import { normalizeForMatch, addDaysIso, mondayOfWeek, todayIso, escapeHtml, formatDateShortTr, statusBadge, DEFAULT_TRACKED_FIELDS } from '../util.js';
 import { parseWeeklyProgramText } from '../bulkParse.js';
 import { getStudent, getStudentAppState, setStudentAppState, listCatalog, getMyCoachProfile, notifyStudent } from './coachCloud.js';
 import { confirmSheet } from '../components/confirmSheet.js';
@@ -868,6 +868,12 @@ function resolveLocalExercise(state, catalogEx) {
   exercise.isDuration = !!catalogEx.isDuration;
   exercise.videoUrl = catalogEx.videoUrl || '';
   exercise.targetRegions = catalogEx.targetRegions || [];
+  // Tracked-fields özelliği (Faz 1) eklendiğinde bu kopyalama unutulmuştu —
+  // kataloğun "Takip Edilecek Alanlar" ayarı hiç buraya yansımıyordu, atanan
+  // egzersiz her zaman DEFAULT_TRACKED_FIELDS'a (Ağırlık/Set/Tekrar/Rir)
+  // düşüyordu, kataloğun kendisinde ne seçili olursa olsun. Bkz. bu düzeltmenin
+  // geldiği sohbet (Hyper Extension'ın Süre yerine Tekrar göstermesi).
+  exercise.trackedFields = catalogEx.trackedFields || DEFAULT_TRACKED_FIELDS;
   return exercise;
 }
 

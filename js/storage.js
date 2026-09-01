@@ -176,6 +176,10 @@ export const exercises = {
     item.isDuration = !!catalogEx.isDuration;
     item.videoUrl = catalogEx.videoUrl || '';
     item.targetRegions = catalogEx.targetRegions || [];
+    // assignProgram.js'teki resolveLocalExercise'ta da unutulmuştu (bkz.
+    // oradaki yorum ve bu düzeltmenin geldiği sohbet) — kataloğun "Takip
+    // Edilecek Alanlar" ayarı bu kopyalamaya hiç dahil değildi.
+    item.trackedFields = catalogEx.trackedFields || DEFAULT_TRACKED_FIELDS;
     saveState(false);
     return item;
   },
@@ -193,6 +197,7 @@ export const exercises = {
     item.isDuration = !!catalogEx.isDuration;
     item.videoUrl = catalogEx.videoUrl || '';
     item.targetRegions = catalogEx.targetRegions || [];
+    item.trackedFields = catalogEx.trackedFields || DEFAULT_TRACKED_FIELDS;
     saveState(false);
     return item;
   },
