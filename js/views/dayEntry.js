@@ -84,7 +84,13 @@ function renderEntry(container, entry) {
   // gerekmiyor mu". Ekran açılışını beklemiyor (fire-and-forget); buton
   // tıklandığında henüz gelmemişse sorun değil, sadece kendi listen gösterilir.
   let catalogForAdd = null;
-  getAnyAccessibleCatalog().then((cat) => { catalogForAdd = cat; });
+  getAnyAccessibleCatalog().then((cat) => {
+    catalogForAdd = cat;
+    // Kataloğa zaten bağlı egzersizleri de sessizce tazele — bkz. storage.js'teki
+    // syncAllWithCatalog ve "Hyper Extension" un elle tazeletilmek zorunda
+    // kaldığı sohbet. Bir şey gerçekten değiştiyse kartları yeniden çiz.
+    if (exercises.syncAllWithCatalog(cat)) renderCards();
+  });
 
   function updateWeekdayLabel() {
     weekdayLabel.textContent = entry.date ? dayOfWeekLabel(entry.date) : '';

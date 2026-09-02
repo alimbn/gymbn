@@ -126,6 +126,24 @@ function libraryItemById(collectionKey, id) {
   return state[collectionKey].find((it) => it.id === id) || null;
 }
 
+// resolveFromCatalog/bindToCatalog/syncAllWithCatalog üçü de kataloktan AYNI 5
+// alanı kopyalıyor — tek yerden, birini güncelleyip diğerini unutma riskini
+// (bkz. trackedFields'ın kopyalamaya hiç dahil edilmediği sohbet) engelliyor.
+// Geriye bir şey GERÇEKTEN değişti mi diye bildiriyor — syncAllWithCatalog
+// bunu gereksiz saveState/cloud push'tan kaçınmak için kullanıyor.
+function applyCatalogFields(item, catalogEx) {
+  const next = {
+    name: catalogEx.name,
+    isDuration: !!catalogEx.isDuration,
+    videoUrl: catalogEx.videoUrl || '',
+    targetRegions: catalogEx.targetRegions || [],
+    trackedFields: catalogEx.trackedFields || DEFAULT_TRACKED_FIELDS,
+  };
+  const changed = Object.keys(next).some((key) => JSON.stringify(item[key]) !== JSON.stringify(next[key]));
+  Object.assign(item, next);
+  return changed;
+}
+
 export const exercises = {
   add: (name, isDuration = false) => createLibraryItem('exercises', 'ex', name, { isDuration }),
   rename: (id, name) => renameLibraryItem('exercises', id, name),
@@ -172,14 +190,7 @@ export const exercises = {
       state.exercises.push(item);
     }
     item.sourceCatalogId = catalogEx.id;
-    item.name = catalogEx.name;
-    item.isDuration = !!catalogEx.isDuration;
-    item.videoUrl = catalogEx.videoUrl || '';
-    item.targetRegions = catalogEx.targetRegions || [];
-    // assignProgram.js'teki resolveLocalExercise'ta da unutulmuştu (bkz.
-    // oradaki yorum ve bu düzeltmenin geldiği sohbet) — kataloğun "Takip
-    // Edilecek Alanlar" ayarı bu kopyalamaya hiç dahil değildi.
-    item.trackedFields = catalogEx.trackedFields || DEFAULT_TRACKED_FIELDS;
+    applyCatalogFields(item, catalogEx);
     saveState(false);
     return item;
   },
@@ -193,13 +204,31 @@ export const exercises = {
     const item = libraryItemById('exercises', id);
     if (!item) return null;
     item.sourceCatalogId = catalogEx.id;
-    item.name = catalogEx.name;
-    item.isDuration = !!catalogEx.isDuration;
-    item.videoUrl = catalogEx.videoUrl || '';
-    item.targetRegions = catalogEx.targetRegions || [];
-    item.trackedFields = catalogEx.trackedFields || DEFAULT_TRACKED_FIELDS;
+    applyCatalogFields(item, catalogEx);
     saveState(false);
     return item;
+  },
+  // Kataloğa zaten bağlı (sourceCatalogId'li) HER egzersizi verilen katalog
+  // listesiyle sessizce tazeler. resolveFromCatalog/bindToCatalog SADECE o an
+  // dokunulan tek kaydı güncelliyordu — admin kataloğu düzenlediğinde ZATEN
+  // bağlı bir öğrenci kaydı bunu ancak BİR SONRAKİ atamada görüyordu ("Hyper
+  // Extension" un iki kere elle tazelenmek zorunda kaldığı sohbete bkz).
+  // dayEntry.js ve exerciseLibrary.js kataloğu zaten her açılışta sessizce
+  // çekiyor (bkz. oradaki çağrı) — buraya bağlanınca yeni bir ekran/buton
+  // olmadan her açılışta kendiliğinden güncel kalıyor. Hiçbir şey değişmediyse
+  // (ezici çoğunluk) saveState/cloud push hiç tetiklenmiyor.
+  syncAllWithCatalog: (catalog) => {
+    if (!catalog || !catalog.length) return 0;
+    const byId = new Map(catalog.map((c) => [c.id, c]));
+    let changedCount = 0;
+    for (const item of state.exercises) {
+      if (!item.sourceCatalogId) continue;
+      const catalogEx = byId.get(item.sourceCatalogId);
+      if (!catalogEx) continue; // kataloğdan arşivlenmiş/silinmiş olabilir, dokunma
+      if (applyCatalogFields(item, catalogEx)) changedCount++;
+    }
+    if (changedCount) saveState(false);
+    return changedCount;
   },
 };
 

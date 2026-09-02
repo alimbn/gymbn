@@ -38,7 +38,14 @@ export function renderLibraryList(container, { title, store, placeholder, backHr
 
   let catalog = null;
   if (enableCatalogMatch) {
-    getAnyAccessibleCatalog().then((cat) => { catalog = cat; updateAddState(); });
+    getAnyAccessibleCatalog().then((cat) => {
+      catalog = cat;
+      // Kataloğa zaten bağlı egzersizleri de sessizce tazele — bkz. storage.js'teki
+      // syncAllWithCatalog ve "Hyper Extension" un elle tazeletilmek zorunda
+      // kaldığı sohbet. Bir şey gerçekten değiştiyse listeyi yeniden çiz.
+      if (store.syncAllWithCatalog?.(cat)) renderItems();
+      updateAddState();
+    });
   }
 
   function findLocalMatch(name, excludeId) {
