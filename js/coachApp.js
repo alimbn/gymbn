@@ -1,6 +1,6 @@
 import {
   onCoachAuthReady, coachLogin, coachSignOut, coachResetPassword, isCurrentUserCoach,
-  listCatalog, addCatalogExercise, renameCatalogExercise, setCatalogDuration, setCatalogMedia, archiveCatalogExercise,
+  listCatalog, addCatalogExercise, renameCatalogExercise, setCatalogMedia, archiveCatalogExercise,
   listRegions,
 } from './coach/coachCloud.js';
 import { renderLoginForm } from './shared/loginForm.js';
@@ -85,7 +85,7 @@ function initCoachApp() {
   // linki gösterip göstermemeyi kontrol ediyor, gerçek yetki sunucu tarafında.
   addRoute(/^#\/catalog$/, (root) => exerciseCatalog.render(root, {
     onBack: () => { location.hash = '#/'; },
-    listCatalog, addCatalogExercise, renameCatalogExercise, setCatalogDuration, setCatalogMedia, archiveCatalogExercise,
+    listCatalog, addCatalogExercise, renameCatalogExercise, setCatalogMedia, archiveCatalogExercise,
     listRegions,
   }));
 

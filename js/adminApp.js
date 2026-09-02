@@ -1,6 +1,6 @@
 import {
   onAdminAuthReady, adminLogin, adminSignOut, adminResetPassword, isCurrentUserAdmin,
-  listCatalog, addCatalogExercise, renameCatalogExercise, setCatalogDuration, setCatalogMedia, archiveCatalogExercise,
+  listCatalog, addCatalogExercise, renameCatalogExercise, setCatalogMedia, archiveCatalogExercise,
   listRegions, broadcastSystemMessage, listMyBroadcasts, deleteBroadcast,
 } from './admin/adminCloud.js';
 import { renderLoginForm } from './shared/loginForm.js';
@@ -256,7 +256,7 @@ async function openBroadcastSheet() {
 function showCatalog() {
   exerciseCatalog.render(viewRoot, {
     onBack: showRoster,
-    listCatalog, addCatalogExercise, renameCatalogExercise, setCatalogDuration, setCatalogMedia, archiveCatalogExercise,
+    listCatalog, addCatalogExercise, renameCatalogExercise, setCatalogMedia, archiveCatalogExercise,
     listRegions,
   });
 }

@@ -146,18 +146,17 @@ export async function renameCatalogExercise(id, name) {
   await setDoc(doc(db, 'exerciseCatalog', id), { name: name.trim() }, { merge: true });
 }
 
-export async function setCatalogDuration(id, isDuration) {
-  await setDoc(doc(db, 'exerciseCatalog', id), { isDuration: !!isDuration }, { merge: true });
-}
-
 // targetRegions: [{name, color}] — regions koleksiyonundan seçilenlerin O ANKİ
 // isim/renginin kopyası (bkz. dosya sonu). dayEntry.js hiçbir zaman regions
-// koleksiyonuna bakmıyor, sadece bu kopyayı okuyor.
-export async function setCatalogMedia(id, { videoUrl, targetRegions, trackedFields }) {
+// koleksiyonuna bakmıyor, sadece bu kopyayı okuyor. isDuration artık ayrı bir
+// setCatalogDuration() yerine burada — bkz. exerciseCatalog.js'teki "Süre-bazlı
+// egzersiz" satırı ve bu değişikliğin geldiği sohbet.
+export async function setCatalogMedia(id, { videoUrl, targetRegions, trackedFields, isDuration }) {
   await setDoc(doc(db, 'exerciseCatalog', id), {
     videoUrl: videoUrl || '',
     targetRegions: targetRegions || [],
     trackedFields: trackedFields?.length ? trackedFields : DEFAULT_TRACKED_FIELDS,
+    isDuration: !!isDuration,
   }, { merge: true });
 }
 

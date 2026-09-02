@@ -123,15 +123,15 @@ export async function renameCatalogExercise(id, name) {
   await setDoc(doc(db, 'exerciseCatalog', id), { name: name.trim() }, { merge: true });
 }
 
-export async function setCatalogDuration(id, isDuration) {
-  await setDoc(doc(db, 'exerciseCatalog', id), { isDuration: !!isDuration }, { merge: true });
-}
-
-export async function setCatalogMedia(id, { videoUrl, targetRegions, trackedFields }) {
+// isDuration artık ayrı bir setCatalogDuration() yerine burada — bkz.
+// adminCloud.js'teki aynı değişiklik ve exerciseCatalog.js'teki "Süre-bazlı
+// egzersiz" satırı.
+export async function setCatalogMedia(id, { videoUrl, targetRegions, trackedFields, isDuration }) {
   await setDoc(doc(db, 'exerciseCatalog', id), {
     videoUrl: videoUrl || '',
     targetRegions: targetRegions || [],
     trackedFields: trackedFields?.length ? trackedFields : DEFAULT_TRACKED_FIELDS,
+    isDuration: !!isDuration,
   }, { merge: true });
 }
 

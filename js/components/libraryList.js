@@ -13,7 +13,7 @@ import { closestCatalogMatch } from '../shared/catalogMatch.js';
 // kalıyor — sadece açık bir "Bağla/Güncelle" düğmesiyle, ne olacağı ÖNCE
 // gösterilerek ilerlenebiliyor. Kendi listende hiç eşi yoksa "Ekle" hep
 // serbest kalıyor (istediğin gibi gerçekten yeni bir şey ekleyebilesin diye).
-export function renderLibraryList(container, { title, store, placeholder, backHref, showDurationToggle, showMediaEditor, enableCatalogMatch }) {
+export function renderLibraryList(container, { title, store, placeholder, backHref, showMediaEditor, enableCatalogMatch }) {
   container.innerHTML = `
     <div class="view-header">
       <a href="${backHref}" class="back-link" aria-label="Geri">←</a>
@@ -136,7 +136,6 @@ export function renderLibraryList(container, { title, store, placeholder, backHr
           <input type="text" class="edit-input" style="display:none" value="${escapeHtml(item.name)}">
         </div>
         <div class="list-item-actions">
-          ${showDurationToggle ? `<button type="button" class="btn-icon duration-toggle-btn${item.isDuration ? ' active' : ''}" aria-label="Süre-bazlı egzersiz" title="Süre-bazlı egzersiz">⏱</button>` : ''}
           ${showMediaEditor ? `<button type="button" class="btn-icon media-btn${(item.videoUrl || item.targetRegions?.length) ? ' active' : ''}" aria-label="Video ve hedef bölge" title="Video ve hedef bölge">${ICON_MEDIA}</button>` : ''}
           <button type="button" class="btn-icon edit-btn" aria-label="Düzenle">✎</button>
           <button type="button" class="btn-icon danger delete-btn" aria-label="Sil">${ICON_TRASH}</button>
@@ -197,10 +196,6 @@ export function renderLibraryList(container, { title, store, placeholder, backHr
         store.archive(row.dataset.id);
         renderItems();
       }
-    } else if (e.target.closest('.duration-toggle-btn')) {
-      const item = store.byId(row.dataset.id);
-      store.setDuration(row.dataset.id, !item.isDuration);
-      renderItems();
     } else if (e.target.closest('.media-btn')) {
       openMediaSheet(store.byId(row.dataset.id));
     }
@@ -229,7 +224,7 @@ export function renderLibraryList(container, { title, store, placeholder, backHr
             )).join('')}
           </div>
         </div>
-        <div class="field" style="margin-bottom:0;">
+        <div class="field">
           <label>Takip edilecek alanlar (istediğin kadar seç)</label>
           <div class="region-grid" id="media-field-grid">
             ${TRACKED_FIELD_TYPES.map((f) => (
@@ -237,15 +232,41 @@ export function renderLibraryList(container, { title, store, placeholder, backHr
             )).join('')}
           </div>
         </div>
+        <div class="setting-row" id="media-duration-row" style="margin-bottom:var(--space-4);">
+          <div class="setting-row-text">
+            <span class="setting-row-title">Süre-bazlı egzersiz</span>
+            <span class="setting-row-sub">Tekrar/Rir saniye olarak yorumlanır (plank, statik tutuş)</span>
+          </div>
+          <button type="button" class="settings-toggle${item.isDuration ? ' on' : ''}" id="media-duration-toggle" aria-label="Süre-bazlı egzersiz" role="switch" aria-checked="${item.isDuration ? 'true' : 'false'}"></button>
+        </div>
         <button type="button" class="btn btn-primary btn-block" id="media-save">Kaydet</button>
       </div>
     `;
     document.body.appendChild(backdrop);
 
+    const durationRow = backdrop.querySelector('#media-duration-row');
+    const durationToggle = backdrop.querySelector('#media-duration-toggle');
+    const fieldGrid = backdrop.querySelector('#media-field-grid');
+
+    // Süre-bazlı anahtarı sadece Tekrar veya Rir seçiliyken bir anlam taşıyor
+    // (bkz. dosya başındaki not) — ikisi de kapalıyken anahtarı tamamen gizle,
+    // Yürüyüş gibi hareketlerde hiç kafa karıştırmasın.
+    function syncDurationRowVisibility() {
+      const hasRepsOrRir = !!fieldGrid.querySelector('[data-key="reps"].selected, [data-key="rir"].selected');
+      durationRow.style.display = hasRepsOrRir ? 'flex' : 'none';
+    }
+    syncDurationRowVisibility();
+
     backdrop.querySelectorAll('.region-chip').forEach((chip) => {
       chip.addEventListener('click', () => {
         chip.classList.toggle('selected');
+        if (chip.closest('#media-field-grid')) syncDurationRowVisibility();
       });
+    });
+
+    durationToggle.addEventListener('click', () => {
+      const isOn = durationToggle.classList.toggle('on');
+      durationToggle.setAttribute('aria-checked', isOn ? 'true' : 'false');
     });
 
     function close() { backdrop.remove(); }
@@ -258,7 +279,11 @@ export function renderLibraryList(container, { title, store, placeholder, backHr
         color: chip.dataset.color,
       }));
       const trackedFields = [...backdrop.querySelectorAll('#media-field-grid .region-chip.selected')].map((chip) => chip.dataset.key);
-      store.setMedia(item.id, { videoUrl, targetRegions, trackedFields });
+      // Satır gizliyken (Tekrar/Rir hiç seçili değilken) anahtarın önceki
+      // durumu ne olursa olsun isDuration'ı false'a düşürüyoruz — gizli bir
+      // anahtarın görünmeyen "açık" hâli kalıcı olarak saklanmasın.
+      const isDuration = durationRow.style.display !== 'none' && durationToggle.classList.contains('on');
+      store.setMedia(item.id, { videoUrl, targetRegions, trackedFields, isDuration });
       close();
       renderItems();
     });

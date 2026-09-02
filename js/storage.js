@@ -148,13 +148,12 @@ export const exercises = {
   add: (name, isDuration = false) => createLibraryItem('exercises', 'ex', name, { isDuration }),
   rename: (id, name) => renameLibraryItem('exercises', id, name),
   archive: (id) => archiveLibraryItem('exercises', id),
-  setDuration: (id, isDuration) => {
-    const item = libraryItemById('exercises', id);
-    if (!item) return;
-    item.isDuration = isDuration;
-    saveState(false);
-  },
-  setMedia: (id, { videoUrl, targetRegions, trackedFields }) => {
+  // isDuration artık libraryList.js'in kendi ayrı ⏱ düğmesi yerine bu sheet'in
+  // içinde yaşıyor (bkz. "Süre-bazlı egzersiz" satırı ve bu değişikliğin geldiği
+  // sohbet) — o yüzden ayrı bir setDuration() yerine tek setMedia() çağrısının
+  // parçası. `typeof` kontrolü, ileride isDuration'sız çağıran biri çıkarsa
+  // (olmaması gerekiyor, ama savunma amaçlı) var olan değeri silmesin diye.
+  setMedia: (id, { videoUrl, targetRegions, trackedFields, isDuration }) => {
     const item = libraryItemById('exercises', id);
     if (!item) return;
     item.videoUrl = videoUrl || '';
@@ -163,6 +162,7 @@ export const exercises = {
     // Boş dizi kaydetmiyoruz — hiçbir alan seçilmemiş bir egzersiz UI'da hiçbir
     // şey gösteremez hale gelir, bunun yerine varsayılana düşüyoruz.
     if (trackedFields) item.trackedFields = trackedFields.length ? trackedFields : DEFAULT_TRACKED_FIELDS;
+    if (typeof isDuration === 'boolean') item.isDuration = isDuration;
     saveState(false);
   },
   active: () => activeLibraryItems('exercises'),

@@ -10,7 +10,7 @@ import { confirmSheet } from '../components/confirmSheet.js';
 // hangi app'in oturumunu (izole admin app'i mi, coach'un paylaşılan
 // oturumu mu) kullanacağını çağıran belirliyor, bu dosya hiç bilmiyor.
 export async function render(container, {
-  onBack, listCatalog, addCatalogExercise, renameCatalogExercise, setCatalogDuration, setCatalogMedia,
+  onBack, listCatalog, addCatalogExercise, renameCatalogExercise, setCatalogMedia,
   archiveCatalogExercise, listRegions,
 }) {
   container.innerHTML = `
@@ -57,7 +57,6 @@ export async function render(container, {
             <input type="text" class="edit-input" style="display:none" value="${escapeHtml(item.name)}">
           </div>
           <div class="list-item-actions">
-            <button type="button" class="btn-icon duration-toggle-btn${item.isDuration ? ' active' : ''}" aria-label="Süre-bazlı egzersiz" title="Süre-bazlı egzersiz">⏱</button>
             <button type="button" class="btn-icon media-btn${(item.videoUrl || item.targetRegions?.length) ? ' active' : ''}" aria-label="Video ve hedef bölge" title="Video ve hedef bölge">${ICON_MEDIA}</button>
             <button type="button" class="btn-icon edit-btn" aria-label="Düzenle">✎</button>
             <button type="button" class="btn-icon danger delete-btn" aria-label="Sil">${ICON_TRASH}</button>
@@ -181,14 +180,6 @@ export async function render(container, {
           alert('Egzersiz silinemedi, internet bağlantını kontrol edip tekrar dene.');
         }
       }
-    } else if (e.target.closest('.duration-toggle-btn')) {
-      item.isDuration = !item.isDuration;
-      renderItems();
-      try {
-        await setCatalogDuration(item.id, item.isDuration);
-      } catch (err) {
-        console.error('Süre-bazlı ayarı güncellenemedi', err);
-      }
     } else if (e.target.closest('.media-btn')) {
       openMediaSheet(item);
     }
@@ -242,7 +233,7 @@ export async function render(container, {
             )).join('') : '<p class="empty-state">Henüz bölge eklenmedi, önce Hedef Bölgeler ekranından ekle.</p>'}
           </div>
         </div>
-        <div class="field" style="margin-bottom:0;">
+        <div class="field">
           <label>Takip edilecek alanlar (istediğin kadar seç)</label>
           <div class="region-grid" id="media-field-grid">
             ${TRACKED_FIELD_TYPES.map((f) => (
@@ -250,15 +241,41 @@ export async function render(container, {
             )).join('')}
           </div>
         </div>
+        <div class="setting-row" id="media-duration-row" style="margin-bottom:var(--space-4);">
+          <div class="setting-row-text">
+            <span class="setting-row-title">Süre-bazlı egzersiz</span>
+            <span class="setting-row-sub">Tekrar/Rir saniye olarak yorumlanır (plank, statik tutuş)</span>
+          </div>
+          <button type="button" class="settings-toggle${item.isDuration ? ' on' : ''}" id="media-duration-toggle" aria-label="Süre-bazlı egzersiz" role="switch" aria-checked="${item.isDuration ? 'true' : 'false'}"></button>
+        </div>
         <button type="button" class="btn btn-primary btn-block" id="media-save">Kaydet</button>
       </div>
     `;
     document.body.appendChild(backdrop);
 
+    const durationRow = backdrop.querySelector('#media-duration-row');
+    const durationToggle = backdrop.querySelector('#media-duration-toggle');
+    const fieldGrid = backdrop.querySelector('#media-field-grid');
+
+    // Süre-bazlı anahtarı sadece Tekrar veya Rir seçiliyken bir anlam taşıyor
+    // (bkz. dosya başındaki not) — ikisi de kapalıyken anahtarı tamamen gizle,
+    // Yürüyüş gibi hareketlerde hiç kafa karıştırmasın.
+    function syncDurationRowVisibility() {
+      const hasRepsOrRir = !!fieldGrid.querySelector('[data-key="reps"].selected, [data-key="rir"].selected');
+      durationRow.style.display = hasRepsOrRir ? 'flex' : 'none';
+    }
+    syncDurationRowVisibility();
+
     backdrop.querySelectorAll('.region-chip').forEach((chip) => {
       chip.addEventListener('click', () => {
         chip.classList.toggle('selected');
+        if (chip.closest('#media-field-grid')) syncDurationRowVisibility();
       });
+    });
+
+    durationToggle.addEventListener('click', () => {
+      const isOn = durationToggle.classList.toggle('on');
+      durationToggle.setAttribute('aria-checked', isOn ? 'true' : 'false');
     });
 
     function close() { backdrop.remove(); }
@@ -271,14 +288,19 @@ export async function render(container, {
         return { name: region.name, color: region.color };
       });
       const trackedFields = [...backdrop.querySelectorAll('#media-field-grid .region-chip.selected')].map((chip) => chip.dataset.key);
+      // Satır gizliyken (Tekrar/Rir hiç seçili değilken) anahtarın önceki
+      // durumu ne olursa olsun isDuration'ı false'a düşürüyoruz — gizli bir
+      // anahtarın görünmeyen "açık" hâli kalıcı olarak saklanmasın.
+      const isDuration = durationRow.style.display !== 'none' && durationToggle.classList.contains('on');
       const saveBtn = backdrop.querySelector('#media-save');
       saveBtn.disabled = true;
       saveBtn.textContent = 'Kaydediliyor…';
       try {
-        await setCatalogMedia(item.id, { videoUrl, targetRegions, trackedFields });
+        await setCatalogMedia(item.id, { videoUrl, targetRegions, trackedFields, isDuration });
         item.videoUrl = videoUrl;
         item.targetRegions = targetRegions;
         item.trackedFields = trackedFields.length ? trackedFields : DEFAULT_TRACKED_FIELDS;
+        item.isDuration = isDuration;
         close();
         renderItems();
       } catch (err) {
