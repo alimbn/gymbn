@@ -1,7 +1,19 @@
-import { escapeHtml, ICON_TRASH, ICON_MEDIA, EXERCISE_REGIONS, TRACKED_FIELD_TYPES, DEFAULT_TRACKED_FIELDS } from '../util.js';
+import { escapeHtml, ICON_TRASH, ICON_MEDIA, EXERCISE_REGIONS, TRACKED_FIELD_TYPES, DEFAULT_TRACKED_FIELDS, normalizeForMatch } from '../util.js';
 import { confirmSheet } from './confirmSheet.js';
+import { getAnyAccessibleCatalog } from '../cloudSync.js';
+import { closestCatalogMatch } from '../shared/catalogMatch.js';
 
-export function renderLibraryList(container, { title, store, placeholder, backHref, showDurationToggle, showMediaEditor }) {
+// enableCatalogMatch: SADECE exerciseLibrary.js için (dayTypeLibrary.js'in
+// kataloğa bağlı bir kavramı hiç yok, o hiç bu alanı geçmiyor). Bu ekranın
+// serbest "Ekle" kutusu, yazım hatalarının (ör. "Hyper extansion") kataloğa
+// hiç bağlanmadan yıllarca sessizce kalabilmesinin gerçek giriş kapısıydı —
+// bkz. bu özelliğin geldiği sohbet. Mantık: yazdığın isim kataloğa TAM ya da
+// YAKIN (yazım hatası ihtimali) uyuyorsa VE kendi listende buna zaten
+// benzer/aynı bir kayıt varsa, "Ekle" o kaydı ele geçirmesin diye devre dışı
+// kalıyor — sadece açık bir "Bağla/Güncelle" düğmesiyle, ne olacağı ÖNCE
+// gösterilerek ilerlenebiliyor. Kendi listende hiç eşi yoksa "Ekle" hep
+// serbest kalıyor (istediğin gibi gerçekten yeni bir şey ekleyebilesin diye).
+export function renderLibraryList(container, { title, store, placeholder, backHref, showDurationToggle, showMediaEditor, enableCatalogMatch }) {
   container.innerHTML = `
     <div class="view-header">
       <a href="${backHref}" class="back-link" aria-label="Geri">←</a>
@@ -12,12 +24,97 @@ export function renderLibraryList(container, { title, store, placeholder, backHr
       <input type="text" id="add-input" placeholder="${placeholder}" autocomplete="off">
       <button type="submit" class="btn btn-primary">Ekle</button>
     </form>
+    <div class="search-hint" id="add-hint"></div>
+    <div id="add-suggest"></div>
     <div class="list" id="list-root"></div>
   `;
 
   const listRoot = container.querySelector('#list-root');
   const addForm = container.querySelector('#add-form');
   const addInput = container.querySelector('#add-input');
+  const addSubmitBtn = addForm.querySelector('button[type="submit"]');
+  const addHint = container.querySelector('#add-hint');
+  const addSuggest = container.querySelector('#add-suggest');
+
+  let catalog = null;
+  if (enableCatalogMatch) {
+    getAnyAccessibleCatalog().then((cat) => { catalog = cat; updateAddState(); });
+  }
+
+  function findLocalMatch(name, excludeId) {
+    const q = normalizeForMatch(name);
+    const active = store.active();
+    const exact = active.find((it) => it.id !== excludeId && normalizeForMatch(it.name) === q);
+    if (exact) return exact;
+    return active.find((it) => it.id !== excludeId && closestCatalogMatch(it.name, [{ id: '_', name }])) || null;
+  }
+
+  // Hem "Ekle" hem önerinin kendi düğmesi AYNI bu fonksiyonu çağırıyor —
+  // ikisinin ayrı ayrı hesaplayıp tutarsız kalması (bu özelliğin demo
+  // aşamasında iki kere yaşandı) böyle engelleniyor.
+  function commitAdd(effectiveName, catalogEx) {
+    const localMatch = findLocalMatch(effectiveName, null);
+    if (localMatch) {
+      if (catalogEx) store.bindToCatalog(localMatch.id, catalogEx);
+      else store.rename(localMatch.id, effectiveName);
+    } else if (catalogEx) {
+      store.resolveFromCatalog(catalogEx);
+    } else {
+      store.add(effectiveName);
+    }
+    addInput.value = '';
+    renderItems();
+    updateAddState();
+    addInput.focus();
+  }
+
+  function updateAddState() {
+    if (!enableCatalogMatch) return;
+    const name = addInput.value;
+    const q = normalizeForMatch(name);
+    addSuggest.innerHTML = '';
+    if (!q) { addHint.textContent = ''; addHint.classList.remove('active'); addSubmitBtn.disabled = false; return; }
+
+    const exactOwn = store.active().find((it) => normalizeForMatch(it.name) === q);
+    if (exactOwn) {
+      addHint.textContent = 'Bu isimde bir egzersizin zaten var.';
+      addHint.classList.add('active');
+      addSubmitBtn.disabled = true;
+      return;
+    }
+    addHint.textContent = '';
+    addHint.classList.remove('active');
+
+    if (!catalog || !catalog.length) { addSubmitBtn.disabled = false; return; }
+    const catalogEx = catalog.find((c) => normalizeForMatch(c.name) === q) || closestCatalogMatch(name, catalog);
+    if (!catalogEx) { addSubmitBtn.disabled = false; return; }
+
+    const effectiveName = catalogEx.name;
+    const localMatch = findLocalMatch(effectiveName, null);
+    if (localMatch) {
+      addSubmitBtn.disabled = true;
+      addSuggest.innerHTML = `
+        <div class="exercise-bind-suggestion">
+          <span>Listende zaten <b>"${escapeHtml(localMatch.name)}"</b> var, kütüphaneye bağlayayım mı?</span>
+          <button type="button" class="exercise-bind-btn" id="bind-btn">Bağla</button>
+        </div>
+      `;
+      container.querySelector('#bind-btn').addEventListener('click', () => commitAdd(effectiveName, catalogEx));
+      return;
+    }
+
+    addSubmitBtn.disabled = false;
+    if (normalizeForMatch(catalogEx.name) !== q) {
+      addSuggest.innerHTML = `
+        <div class="exercise-bind-suggestion">
+          <span>Kütüphanede <b>"${escapeHtml(catalogEx.name)}"</b> var, bunu mu demek istedin?</span>
+          <button type="button" class="exercise-bind-btn" id="bind-btn">Buna Bağla</button>
+        </div>
+      `;
+      container.querySelector('#bind-btn').addEventListener('click', () => commitAdd(catalogEx.name, catalogEx));
+    }
+  }
+  addInput.addEventListener('input', updateAddState);
 
   function renderItems() {
     const items = store.active();
@@ -67,12 +164,19 @@ export function renderLibraryList(container, { title, store, placeholder, backHr
 
   addForm.addEventListener('submit', (e) => {
     e.preventDefault();
+    if (addSubmitBtn.disabled) return;
     const name = addInput.value.trim();
     if (!name) return;
-    store.add(name);
-    addInput.value = '';
-    renderItems();
-    addInput.focus();
+    if (enableCatalogMatch) {
+      const q = normalizeForMatch(name);
+      const catalogEx = catalog && (catalog.find((c) => normalizeForMatch(c.name) === q) || closestCatalogMatch(name, catalog));
+      commitAdd(catalogEx ? catalogEx.name : name, catalogEx || null);
+    } else {
+      store.add(name);
+      addInput.value = '';
+      renderItems();
+      addInput.focus();
+    }
   });
 
   listRoot.addEventListener('click', async (e) => {

@@ -9,5 +9,6 @@ export function render(container) {
     backHref: '#/more',
     showDurationToggle: true,
     showMediaEditor: true,
+    enableCatalogMatch: true,
   });
 }
