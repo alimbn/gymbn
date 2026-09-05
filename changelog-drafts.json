@@ -4,5 +4,6 @@
   { "id": "2026-09-01-catalog-link", "category": "improvement", "text": "Kendi Antrenmanım'da elle yazdığın bir egzersizi kütüphaneyle eşleştirebilme" },
   { "id": "2026-09-01-add-exercise-catalog", "category": "improvement", "text": "Güne egzersiz eklerken artık hocanın kütüphanesi de aranıyor" },
   { "id": "2026-09-01-turkish-i-fix", "category": "fix", "text": "Büyük \"I\" harfi bazı egzersiz isimlerinde (Incline gibi) arama/eşleşmeyi bozuyordu" },
-  { "id": "2026-09-01-divider-fix", "category": "fix", "text": "Gün kartları arasındaki çizgi çok soluktu, fark edilmiyordu" }
+  { "id": "2026-09-01-divider-fix", "category": "fix", "text": "Gün kartları arasındaki çizgi çok soluktu, fark edilmiyordu" },
+  { "id": "2026-09-05-managed-catalog-lock", "category": "improvement", "text": "Kütüphanede olmayan bir egzersiz artık kimse tarafından doğrudan eklenemiyor, önce admin tarafından eklenmesi gerekiyor" }
 ]

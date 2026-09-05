@@ -6,6 +6,16 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["devserver.py", "5174", "."],
       "port": 5174
+    },
+    {
+      "name": "gymbn-scratchpad-harness",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "C:\\Users\\mubin\\Documents\\GitHub\\gyMbn\\devserver.py",
+        "5188",
+        "C:\\Users\\mubin\\AppData\\Local\\Temp\\claude\\C--Users-mubin-Documents-GitHub-gyMbn\\eb2e9449-9527-4fef-9c74-a335cfb8e7c6\\scratchpad"
+      ],
+      "port": 5188
     }
   ]
 }

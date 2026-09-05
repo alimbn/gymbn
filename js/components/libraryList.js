@@ -4,15 +4,16 @@ import { getAnyAccessibleCatalog } from '../cloudSync.js';
 import { closestCatalogMatch } from '../shared/catalogMatch.js';
 
 // enableCatalogMatch: SADECE exerciseLibrary.js için (dayTypeLibrary.js'in
-// kataloğa bağlı bir kavramı hiç yok, o hiç bu alanı geçmiyor). Bu ekranın
-// serbest "Ekle" kutusu, yazım hatalarının (ör. "Hyper extansion") kataloğa
-// hiç bağlanmadan yıllarca sessizce kalabilmesinin gerçek giriş kapısıydı —
-// bkz. bu özelliğin geldiği sohbet. Mantık: yazdığın isim kataloğa TAM ya da
-// YAKIN (yazım hatası ihtimali) uyuyorsa VE kendi listende buna zaten
-// benzer/aynı bir kayıt varsa, "Ekle" o kaydı ele geçirmesin diye devre dışı
-// kalıyor — sadece açık bir "Bağla/Güncelle" düğmesiyle, ne olacağı ÖNCE
-// gösterilerek ilerlenebiliyor. Kendi listende hiç eşi yoksa "Ekle" hep
-// serbest kalıyor (istediğin gibi gerçekten yeni bir şey ekleyebilesin diye).
+// kataloğa bağlı bir kavramı hiç yok, o hiç bu alanı geçmiyor). "Kimse yeni
+// hareket eklemeyecek, herkes admin'den eklenen hareketleri kullanacak" —
+// standing prensip, bkz. bu özelliğin geldiği sohbet (hem coach-yönetimli
+// öğrenciler HEM koçun kendi "Kendi Antrenmanım" hesabı için, hesap türü fark
+// etmeksizin AYNI kural). Mantık: yazdığın isim kataloğa TAM ya da YAKIN
+// (yazım hatası ihtimali) uyuyorsa VE kendi listende buna zaten benzer/aynı
+// bir kayıt varsa, "Ekle" o kaydı ele geçirmesin diye devre dışı kalıyor —
+// sadece açık bir "Bağla/Güncelle" düğmesiyle, ne olacağı ÖNCE gösterilerek
+// ilerlenebiliyor. Kataloğa hiç uymayan GERÇEKTEN yeni bir isimse "Ekle" artık
+// hep devre dışı — kütüphane dışı bağımsız kayıt hiçbir hesapta oluşmasın diye.
 export function renderLibraryList(container, { title, store, placeholder, backHref, showMediaEditor, enableCatalogMatch }) {
   container.innerHTML = `
     <div class="view-header">
@@ -92,9 +93,17 @@ export function renderLibraryList(container, { title, store, placeholder, backHr
     addHint.textContent = '';
     addHint.classList.remove('active');
 
-    if (!catalog || !catalog.length) { addSubmitBtn.disabled = false; return; }
+    // Kataloğa hiç uymayan, gerçekten yeni bir isim artık kimse için serbestçe
+    // eklenemiyor — bkz. dosya başındaki not.
+    const blockUnlisted = () => {
+      addHint.textContent = 'Bu hareket kütüphanede yok. Kütüphaneye eklenmesi için admin\'e ilet.';
+      addHint.classList.add('active');
+      addSubmitBtn.disabled = true;
+    };
+
+    if (!catalog || !catalog.length) { blockUnlisted(); return; }
     const catalogEx = catalog.find((c) => normalizeForMatch(c.name) === q) || closestCatalogMatch(name, catalog);
-    if (!catalogEx) { addSubmitBtn.disabled = false; return; }
+    if (!catalogEx) { blockUnlisted(); return; }
 
     const effectiveName = catalogEx.name;
     const localMatch = findLocalMatch(effectiveName, null);
